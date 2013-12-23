@@ -9,3 +9,4 @@ console.log(db.query('SELECT 1 as a, 2 as b'));
 console.log(db.query("SELECT 'Monikas Imbiss'"));
 console.log(db.query("SELECT 'Monika\\'s Imbiss'"));
 console.log(db.query("SELECT *, 12"));
+console.log(db.query("SELECT * FROM tables"));

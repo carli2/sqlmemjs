@@ -29,9 +29,10 @@ var grammar = {
 	],
 	bnf: {
 		"expressions":  [["cmd EOF", "return $1;"]],
-		"cmd": [
-			["SELECT cols", "$$ = {type: 'SELECT', expr: $2};"]
-		],
+		"cmd": [["select", "$$ = $1"]],
+		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
+		"select2": [["select1", "$$ = $1"], ["select1 FROM IDENTIFIER", "$$ = $1; $$.from = $3;"]],
+		"select": [["select2", "$$ = $1;"]],
 		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = [yytext, $1];"]],
 		"cols": [["col", "$$ = [$1];"], ["*", "$$ = ['all'];"], ["cols , col", "$$ = $1; $$.push($3);"], ["cols , *", "$$ = $1; $$.push('all');"]],
 		"e": [
