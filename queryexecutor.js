@@ -53,6 +53,44 @@ function SQLinMemory() {
 				return i;
 		}
 	}
+	function createFunction(id, code, schema) {
+		if(typeof code == 'object') {
+			if(code.id) {
+				// element fetch
+				for(var i in schema) {
+					var x = schema[i][0];
+					if(code.id.toUpperCase() == x.toUpperCase()) {
+						return {
+							id: id,
+							type: schema[i][1],
+							fn: function(tuples){return tuples[x];}
+						};
+					}
+				}
+				throw "Unknown identifier: " + code.id;
+			}
+		}
+		if(typeof code == 'number') {
+			return {
+				id: id,
+				type: 'DOUBLE',
+				fn: function(){return code;}
+			};
+		}
+		if(typeof code == 'string') {
+			return {
+				id: id,
+				type: 'STRING',
+				fn: function(){return code;}
+			};
+		}
+		// Default
+		return {
+			id: id,
+			type: 'INTEGER',
+			fn: function(t){return 1;}
+		};
+	}
 	/*
 	Single value select
 	*/
@@ -143,14 +181,50 @@ function SQLinMemory() {
 			return tuple;
 		}
 	}
+	/*
+	Adjunction: do calculation on cols
+	*/
+	function Adjunction(table, cols) {
+		var t = table;
+		var c = [];
+		for(var i in cols) {
+			// id, fn, type
+			c.push(createFunction(cols[i][0], cols[i][1], table.getSchema())); // id, code, schema
+		}
+		this.reset = function() {
+			t.reset();
+		}
+		this.close = function() {
+			t.close();
+		}
+		this.getSchema = function() {
+			var r = [];
+			for(var i in c) r.push([c[i].id, c[i].type]);
+			return r;
+		}
+		this.fetch = function() {
+			var tuple = t.fetch();
+			if(!tuple) return tuple;
+			var result = {};
+			for(var i in c) {
+				result[c[i].id] = c[i].fn(tuple);
+			}
+			return result;
+		}
+	}
 	function getTableIterator(identifier) {
 		if(identifier.toUpperCase() == 'TABLES')
 			return new tableIterator();
 		// TODO: also return tables
 	}
+	/*
+	Main query method
+	*/
 	this.query = function(sql) {
+		// parse the query
 		var query = parser.parse(sql);
 		console.log(JSON.stringify(query));
+		// process queries
 		if(query.type == 'select') {
 			var from = null;
 			if(query.from) {
@@ -173,7 +247,40 @@ function SQLinMemory() {
 				// Single Select
 				from = new singleValue(1, 'INTEGER');
 			}
-			// TODO: WHERE-Filter, Projection
+			// TODO: WHERE-Filter (and find index checks)
+			from = from;
+			// Adjunction/Projection
+			var cols = [];
+			for(var i in query.expr) {
+				if(query.expr[i] == '') {
+					// select *
+					var schema = from.getSchema();
+					for(var j in schema) {
+						var x = schema[j][0];
+						if(x.indexOf('.') != -1)
+							cols.push([x, {id: x}]);
+					}
+				} else if((typeof query.expr[i]) == 'string') {
+					// select table.*
+					var table = getTableIterator(query.expr[i]);
+					if(!table)
+						throw "Table " + query.expr[i] + " does not exist";
+					var schema = table.getSchema();
+					table.close();
+					for(var j in schema) {
+						var x = query.expr[i] + '.' + schema[j][0];
+						if(x.indexOf('.') != -1)
+							cols.push([x, {id: x}]);
+					}
+				} else {
+					// ... as ... or ...
+					cols.push(query.expr[i]);
+				}
+			}
+			from = new Adjunction(from, cols);
+			// TODO: Group by
+			// TODO: Having
+			// TODO: Order
 			return from;
 		}
 	}
