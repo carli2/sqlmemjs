@@ -33,9 +33,11 @@ function SQLinMemory() {
 				// fetch one row
 				var tuple = {IDENTIFIER: keys[cursor]};
 				// move cursor one further
-				while(cursor < keys.length && !tables[keys[cursor]]) {
+				cursor++;
+				// skip all broken tables
+				/*while(!tables[keys[cursor]]) {
 					cursor++;
-				}
+				}*/
 				return tuple;
 			}
 		}
@@ -51,6 +53,76 @@ function SQLinMemory() {
 				return i;
 		}
 	}
+	/*
+	Traditional cross join
+	*/
+	function crossJoin(a, b) {
+		var t1 = a, t2 = b;
+		var leftTuple = t1.fetch();
+		this.reset = function() {
+			t1.reset();
+			leftTuple = t1.fetch();
+			t2.reset();
+		}
+		this.close = function() {
+			t1.close();
+			t2.close();
+		}
+		this.getSchema = function() {
+			var r = [];
+			var s = t1.getSchema();
+			for(var i in s) r.push(s[i]);
+			s = t2.getSchema();
+			for(var i in s) r.push(s[i]);
+			return r;
+		}
+		this.fetch = function() {
+			if(!leftTuple) return undefined;
+			var rightTuple = t2.fetch();
+			if(!rightTuple) {
+				leftTuple = t1.fetch();
+				if(!leftTuple) // end of cross join
+					return undefined;
+				t2.reset();
+				rightTuple = t2.fetch();
+				if(!rightTuple) // t2 is empty
+					return undefined;
+			}
+			var tuple = {};
+			for(var i in leftTuple) {
+				tuple[i] = leftTuple[i];
+			}
+			for(var i in rightTuple) {
+				tuple[i] = rightTuple[i];
+			}
+			return tuple;
+		}
+	}
+	// add name to a tables identifiers
+	function renameSchema(table, prefix) {
+		var t = table, p = prefix;
+		this.reset = function() {
+			t.reset();
+		}
+		this.close = function() {
+			t.close();
+		}
+		this.getSchema = function() {
+			var r = [];
+			var s = t.getSchema();
+			for(var i in s) r.push(s[i]);
+			for(var i in s) r.push([p+'.'+s[i][0], s[i][1]]);
+			return r;
+		}
+		this.fetch = function() {
+			var tuple = t.fetch();
+			if(!tuple) return tuple;
+			for(var i in tuple) {
+				tuple[p+'.'+i] = tuple[i];
+			}
+			return tuple;
+		}
+	}
 	function getTableIterator(identifier) {
 		if(identifier.toUpperCase() == 'TABLES')
 			return new tableIterator();
@@ -60,11 +132,29 @@ function SQLinMemory() {
 		var query = parser.parse(sql);
 		console.log(JSON.stringify(query));
 		if(query.type == 'select') {
+			var from = null;
 			if(query.from) {
-				var from = getTableIterator(query.from);
+				var tables = query.from;
+				for(var t in tables) {
+					var iterator = getTableIterator(tables[t]);
+					if(!iterator) {
+						throw "Table does not exist: " + tables[t];
+					}
+					iterator = new renameSchema(iterator, t);
+					tables[t] = iterator;
+					// cross-join all FROMs
+					if(from) {
+						from = new crossJoin(from, iterator);
+					} else {
+						from = iterator;
+					}
+				}
 				return from;
-				// TODO: select etc.
+			} else {
+				// Single Select
+				// TODO: from = singleSelect
 			}
+			// TODO: WHERE-Filter, Projection
 		}
 	}
 }

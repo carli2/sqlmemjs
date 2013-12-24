@@ -11,3 +11,4 @@ console.log(db.query("SELECT 'Monikas Imbiss'"));
 console.log(db.query("SELECT 'Monika\\'s Imbiss'"));
 console.log(db.query("SELECT *, 12"));
 printTable(db.query("SELECT * FROM tables"));
+printTable(db.query("SELECT * FROM tables as t1, tables as t2"));
