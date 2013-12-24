@@ -16,11 +16,14 @@ function SQLinMemory() {
 		this.close = function() {
 		}
 		this.fetch = function() {
-			while(cursor < keys.length && !tables[keys[cursor]]) {
-				cursor++;
-			}
 			if(cursor < keys.length) {
-				return {IDENTIFIER: keys[cursor]};
+				// fetch one row
+				var tuple = {IDENTIFIER: keys[cursor]};
+				// move cursor one further
+				while(cursor < keys.length && !tables[keys[cursor]]) {
+					cursor++;
+				}
+				return tuple;
 			}
 		}
 		this.getSchema = function() {
@@ -53,6 +56,26 @@ function SQLinMemory() {
 	}
 }
 
+function printTable(table, print) {
+	print = print || console.log;
+	var schema = table.getSchema();
+	var line = '';
+	for(var i in schema) {
+		line += schema[i][0] + '; ';
+	}
+	print(line);
+	print(line.replace(/./g, '-'));
+	var tuple;
+	while(tuple = table.fetch()) {
+		line = '';
+		for(var i in schema) {
+			line += tuple[schema[i][0]] + '; ';
+		}
+		print(line);
+	}
+}
+
 if(typeof exports) {
 	exports.SQLinMemory = SQLinMemory;
+	exports.printTable = printTable;
 }
