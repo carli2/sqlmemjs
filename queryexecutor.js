@@ -54,6 +54,26 @@ function SQLinMemory() {
 		}
 	}
 	/*
+	Single value select
+	*/
+	function singleValue(value, type) {
+		var count = 0;
+		this.reset = function() {
+			count = 0;
+		}
+		this.close = function() {
+		}
+		this.fetch = function() {
+			if(count == 0) {
+				count++;
+				return {VALUE: value};
+			}
+		}
+		this.getSchema = function() {
+			return [['VALUE', type]];
+		}
+	}
+	/*
 	Traditional cross join
 	*/
 	function crossJoin(a, b) {
@@ -149,12 +169,12 @@ function SQLinMemory() {
 						from = iterator;
 					}
 				}
-				return from;
 			} else {
 				// Single Select
-				// TODO: from = singleSelect
+				from = new singleValue(1, 'INTEGER');
 			}
 			// TODO: WHERE-Filter, Projection
+			return from;
 		}
 	}
 }

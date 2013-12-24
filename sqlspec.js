@@ -12,6 +12,7 @@ var grammar = {
 		["[Ff][Rr][Oo][Mm]", "return 'FROM';"],
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER';"],
 		[",", "return ',';"],
+		["\\.", "return '.';"],
 		["\\*", "return '*';"],
 		["\\+", "return '+';"],
 		["-", "return '-';"],
@@ -34,8 +35,9 @@ var grammar = {
 		"select2": [["select1", "$$ = $1"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
 		"select": [["select2", "$$ = $1;"]],
 
-		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = [yytext, $1];"]],
-		"cols": [["col", "$$ = [$1];"], ["*", "$$ = ['all'];"], ["cols , col", "$$ = $1; $$.push($3);"], ["cols , *", "$$ = $1; $$.push('all');"]],
+		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = [yytext, $1];"],
+			["*", "$$ = '';"], ["IDENTIFIER . *", "$$ = $1;"]],
+		"cols": [["col", "$$ = [$1];"], ["cols , col", "$$ = $1; $$.push($3);"]],
 
 		"table": [["IDENTIFIER AS IDENTIFIER", "$$ = {}; $$[$3] = $1;"], ["IDENTIFIER", "$$ = {}; $$[$1] = $1;"]],
 		"tables": [["table", "$$ = $1;"], ["tables , IDENTIFIER AS IDENTIFIER", "$$ = $1; $$[$5] = $3;"], ["tables , IDENTIFIER", "$$ = $1; $$[$3] = $3;"]],
