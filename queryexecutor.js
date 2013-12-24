@@ -1,5 +1,18 @@
 var parser = require('./sqlparser').parser;
 
+/*
+
+Interface Cursor:
+ Constructor - has to initialize the first walkthrough
+ function reset() - restart walking through the data.
+ function fetch() - return object containing the data of the next row. return undefined or null if no rows left
+ function close() - shut down all observers and close all sub-cursors
+ function getSchema() - return an array of fields of the form [identifier, type]
+A storage backend has to implement that interface. Also all relational operations like selections, projections, cross-joins, index-joins, groups are cursors.
+
+
+*/
+
 function SQLinMemory() {
 	var tables = {};
 
