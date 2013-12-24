@@ -10,7 +10,8 @@ var grammar = {
 		["[Ss][Ee][Ll][Ee][Cc][Tt]", "return 'SELECT';"],
 		["[Aa][Ss]", "return 'AS';"],
 		["[Ff][Rr][Oo][Mm]", "return 'FROM';"],
-		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER';"],
+		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
+		["`.+?`", "return 'IDENTIFIER2';"],
 		[",", "return ',';"],
 		["\\.", "return '.';"],
 		["\\*", "return '*';"],
@@ -50,7 +51,12 @@ var grammar = {
 			["- e", "$$ = {op: 'neg', a: $2};",  {prec: "UMINUS"}],
 			["( e )", "$$ = $2;"],
 			["NUMBER", "$$ = Number(yytext);"],
-			["STRING", "$$ = eval(yytext);"]
+			["STRING", "$$ = eval(yytext);"],
+			["IDENTIFIER", "$$ = {id: $1};"]
+		],
+		"IDENTIFIER": [
+			["IDENTIFIER1", "$$ = $1;"],
+			["IDENTIFIER2", "$$ = $1.substring(1, $1.length-1);"]
 		]
 	}
 };
