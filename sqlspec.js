@@ -33,6 +33,7 @@ var grammar = {
 		["\\/", "return '/';"],
 		["\\(", "return '(';"],
 		["\\)", "return ')';"],
+		["\\?", "return '?';"],
 		["$", "return 'EOF';"],
 		]
 	},
@@ -93,7 +94,8 @@ var grammar = {
 			["NUMBER", "$$ = Number(yytext);"],
 			["STRING", "$$ = $1;"],
 			["IDENTIFIER", "$$ = {id: $1};"],
-			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"]
+			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"],
+			["?", "$$ = {wildcard: true};"]
 		],
 		"IDENTIFIER": [
 			["IDENTIFIER1", "$$ = $1;"],

@@ -128,9 +128,17 @@ function SQLinMemory() {
 	@param schema schema of the input tuple for that expression
 	@return {id: string, type: string, fn: function(tuples: JSON)=>value} compiled function
 	*/
-	function createFunction(id, code, schema) {
+	function createFunction(id, code, schema, args) {
 		if(typeof code == 'object') {
-			if(code.id) {
+			if(code.wildcard) {
+				// ? element (pop one argument)
+				var value = args.pop();
+				return {
+					id: id,
+					type: (typeof value === 'number') ? 'NUMBER' : 'TEXT',
+					fn: function(tuples) { return value; }
+				}
+			} else if(code.id) {
 				// element fetch
 				for(var i in schema) {
 					var x = schema[i][0];
@@ -144,8 +152,8 @@ function SQLinMemory() {
 				}
 				throw "Unknown identifier: " + code.id;
 			} else if(code.op) {
-				var a = code.a ? createFunction('', code.a, schema).fn : undefined;
-				var b = code.b ? createFunction('', code.b, schema).fn : undefined;
+				var a = code.a ? createFunction('', code.a, schema, args).fn : undefined;
+				var b = code.b ? createFunction('', code.b, schema, args).fn : undefined;
 				switch(code.op) {
 					case 'add':
 					return {
@@ -165,14 +173,14 @@ function SQLinMemory() {
 		if(typeof code == 'number') {
 			return {
 				id: id,
-				type: 'DOUBLE',
+				type: 'NUMBER',
 				fn: function(){return code;}
 			};
 		}
 		if(typeof code == 'string') {
 			return {
 				id: id,
-				type: 'STRING',
+				type: 'TEXT',
 				fn: function(){return code;}
 			};
 		}
@@ -278,12 +286,12 @@ function SQLinMemory() {
 	/*
 	Adjunction: do calculation on cols
 	*/
-	function Adjunction(table, cols) {
+	function Adjunction(table, cols, args) {
 		var t = table;
 		var c = [];
 		for(var i in cols) {
 			// id, fn, type
-			c.push(createFunction(cols[i][0], cols[i][1], table.getSchema())); // id, code, schema
+			c.push(createFunction(cols[i][0], cols[i][1], table.getSchema(), args)); // id, code, schema
 		}
 		this.reset = function() {
 			t.reset();
@@ -310,6 +318,10 @@ function SQLinMemory() {
 	Main query method
 	*/
 	this.query = function(sql) {
+		var args = []; // wildcard arguments
+		for(var i = arguments.length-1; i > 0; i--) {
+			args.push(arguments[i]);
+		}
 		// parse the query
 		var query = parser.parse(sql);
 		console.log(sql + ' => ' + JSON.stringify(query));
@@ -367,7 +379,7 @@ function SQLinMemory() {
 				}
 			}
 			// compile calculations
-			from = new Adjunction(from, cols);
+			from = new Adjunction(from, cols, args);
 			// TODO: Group by
 			// TODO: Having
 			// TODO: Order
@@ -393,7 +405,7 @@ function SQLinMemory() {
 					query.cols[i].type = typ;
 					if(query.cols[i].default) {
 						// DEFAULT-Value: evaluate and check
-						var code = createFunction('default', query.cols[i].default, []);
+						var code = createFunction('default', query.cols[i].default, [], args);
 						if(validateDatatype(code.type) != typ) {
 							throw "incompatible data type for default value";
 						}
@@ -435,7 +447,7 @@ function SQLinMemory() {
 				var tuple = {};
 				for(var j in row) {
 					// compile code of the insert query
-					var code = createFunction(cols[j], row[j], []);
+					var code = createFunction(cols[j], row[j], [], args);
 					tuple[code.id] = code.fn({}); // fill the tuples
 				}
 				// fill default values and auto_increment
@@ -452,7 +464,7 @@ function SQLinMemory() {
 							tuple[col.id] = col.default;
 						} else {
 							// zero value
-							if(col.type === 'STRING') {
+							if(col.type === 'TEXT') {
 								tuple[col.id] = '';
 							} else if(col.type === 'NUMBER') {
 								tuple[col.id] = 0;
