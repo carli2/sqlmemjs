@@ -68,7 +68,8 @@ var grammar = {
 			["( e )", "$$ = $2;"],
 			["NUMBER", "$$ = Number(yytext);"],
 			["STRING", "$$ = eval(yytext);"],
-			["IDENTIFIER", "$$ = {id: $1};"]
+			["IDENTIFIER", "$$ = {id: $1};"],
+			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"]
 		],
 		"IDENTIFIER": [
 			["IDENTIFIER1", "$$ = $1;"],
