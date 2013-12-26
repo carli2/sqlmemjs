@@ -6,7 +6,7 @@ var grammar = {
 		["\\s+", "" /* skop whitespace */],
 		// literals
 		["[0-9]+", "return 'NUMBER';"],
-		["'(\\\\'|.)*?'", "return 'STRING';"],
+		["'(\\\\'|.)*?'", "return 'STRINGX';"],
 		// reserved words: this is since JS Regex does not support (?i)
 		["[Ss][Ee][Ll][Ee][Cc][Tt]\\b", "return 'SELECT';"],
 		["[Aa][Ss]\\b", "return 'AS';"],
@@ -17,6 +17,10 @@ var grammar = {
 		["[Ff][Rr][Oo][Mm]\\b", "return 'FROM';"],
 		["[Ii][Nn][Ss][Ee][Rr][Tt]\\s+[Ii][Nn][Tt][Oo]\\b", "return 'INSERTINTO';"],
 		["[Vv][Aa][Ll][Uu][Ee][Ss]\\b", "return 'VALUES';"],
+		["[Dd][Ee][Ff][Aa][Uu][Ll][Tt]\\b", "return 'DEFAULT';"],
+		["[Pp][Rr][Ii][Mm][Aa][Rr][Yy]\\s+[Kk][Ee][Yy]\\b", "return 'PRIMARYKEY';"],
+		["[Aa][Uu][Tt][Oo]_[Ii][Nn][Cc][Rr][Ee][Mm][Ee][Nn][Tt]\\b", "return 'AUTO_INCREMENT';"],
+		["[Cc][Oo][Mm][Mm][Ee][Nn][Tt]\\b", "return 'COMMENT';"],
 		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
 		["`.+?`", "return 'IDENTIFIER2';"],
@@ -51,7 +55,13 @@ var grammar = {
 		// table creation syntax
 		"createtable": [["CREATE TABLE IDENTIFIER ( tabrowdefs )", "$$ = {type: 'createtable', id: $3, cols: $5, erroronexists: true};"], ["CREATE TABLE IFNOTEXISTS IDENTIFIER ( tabrowdefs )", "$$ = {type: 'createtable', id: $4, cols: $6};"]],
 		"tabrowdefs": [["", "$$ = [];"], ["tabrowdef", "$$ = [$1];"], ["tabrowdefs , tabrowdef", "$$ = $1; $$.push($3);"]],
-		"tabrowdef": [["IDENTIFIER IDENTIFIER", "$$ = [$1, $2];"]],
+		"tabrowdef": [
+				["IDENTIFIER IDENTIFIER", "$$ = {id: $1, type: $2};"],
+				["tabrowdef DEFAULT e", "$$ = $1; $$.default = $3;"],
+				["tabrowdef PRIMARYKEY", "$$ = $1; $$.primary = true;"],
+				["tabrowdef AUTO_INCREMENT", "$$ = $1; $$.auto_increment = 1;"],
+				["tabrowdef COMMENT STRING", "$$ = $1; $$.comment = $3;"]
+		],
 
 		// insert syntax
 		"insert": [["INSERTINTO IDENTIFIER ( idlist ) VALUES insertrows", "$$ = {type: 'insert', table: $2, cols: $4, rows: $7};"]],
@@ -81,14 +91,15 @@ var grammar = {
 			["- e", "$$ = {op: 'neg', a: $2};",  {prec: "UMINUS"}],
 			["( e )", "$$ = $2;"],
 			["NUMBER", "$$ = Number(yytext);"],
-			["STRING", "$$ = eval(yytext);"],
+			["STRING", "$$ = $1;"],
 			["IDENTIFIER", "$$ = {id: $1};"],
 			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"]
 		],
 		"IDENTIFIER": [
 			["IDENTIFIER1", "$$ = $1;"],
 			["IDENTIFIER2", "$$ = $1.substring(1, $1.length-1);"]
-		]
+		],
+		"STRING": [["STRINGX", "$$ = eval(yytext)"]]
 	}
 };
 

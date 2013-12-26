@@ -29,7 +29,7 @@ Supported Commands
 ------------------
 
 - SHOW TABLES
-- CREATE TABLE table(col1 type1, col2 type2)
+- CREATE TABLE table(col1 type1 PRIMARY KEY AUTO\_INCREMENT, col2 type2 DEFAULT value)
 - INSERT INTO table(col1, col2) VALUES (val11, val12), (val21, val22)
 - SELECT \* FROM table
 - SELECT \* FROM table1, table2

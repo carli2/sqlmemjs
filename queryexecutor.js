@@ -92,7 +92,11 @@ function SQLinMemory() {
 			}
 		}
 		this.getSchema = function() {
-			return table.schema;
+			var schema = [];
+			for(var i in table.schema) {
+				schema.push([table.schema[i].id, table.schema[i].type]);
+			}
+			return schema;
 		}
 	}
 	/*
@@ -380,7 +384,19 @@ function SQLinMemory() {
 			} else {
 				// create table: verify col types
 				for(var i in query.cols) {
-					query.cols[i][1] = validateDatatype(query.cols[i][1]);
+					var typ = validateDatatype(query.cols[i].type);
+					if(!typ) {
+						throw "unknown data type: " + query.cols[i].type;
+					}
+					query.cols[i].type = typ;
+					if(query.cols[i].default) {
+						// DEFAULT-Value: evaluate and check
+						var code = createFunction('default', query.cols[i].default, []);
+						if(validateDatatype(code.type) != typ) {
+							throw "incompatible data type for default value";
+						}
+						query.cols[i].default = code.fn({});
+					}
 				}
 				// create data structure for table
 				table = {id: query.id, schema: query.cols, data: []};
@@ -394,12 +410,11 @@ function SQLinMemory() {
 				throw "Table " + query.table + " does not exist";
 			}
 			var table = tables[tablename];
-			var cols = Array(query.cols);
+			var cols = Array(query.cols.length);
 			for(var i in query.cols) {
-				cols[i] = undefined;
 				for(var j in table.schema) {
-					if(query.cols[i].toUpperCase() == table.schema[j][0].toUpperCase()) {
-						cols[i] = table.schema[j][0];
+					if(query.cols[i].toUpperCase() == table.schema[j].id.toUpperCase()) {
+						cols[i] = table.schema[j].id;
 					}
 				}
 				if(!cols[i]) {
@@ -420,13 +435,22 @@ function SQLinMemory() {
 				// fill default values and auto_increment
 				for(var j in table.schema) {
 					var col = table.schema[j];
-					if(!tuple[col[0]]) {
+					if(!tuple[col.id]) {
 						// col default
-						// TODO: auto_increment
-						if(col[1] === 'STRING') {
-							tuple[col[0]] = '';
-						} else if(col[1] === 'NUMBER') {
-							tuple[col[0]] = 0;
+						if(col.auto_increment) {
+							// AUTO_INCREMENT
+							tuple[col.id] = col.auto_increment;
+							col.auto_increment++;
+						} else if(col.default) {
+							// DEFAULT-Value
+							tuple[col.id] = col.default;
+						} else {
+							// zero value
+							if(col.type === 'STRING') {
+								tuple[col.id] = '';
+							} else if(col.type === 'NUMBER') {
+								tuple[col.id] = 0;
+							}
 						}
 					}
 				}
