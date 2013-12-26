@@ -10,6 +10,7 @@ var grammar = {
 		// reserved words: this is since JS Regex does not support (?i)
 		["[Ss][Ee][Ll][Ee][Cc][Tt]\\b", "return 'SELECT';"],
 		["[Aa][Ss]\\b", "return 'AS';"],
+		["[Ss][Hh][Oo][Ww]\\s+[Tt][Aa][Bb][Ll][Ee][Ss]\\b", "return 'SHOWTABLES';"],
 		["[Cc][Rr][Ee][Aa][Tt][Ee]\\b", "return 'CREATE';"],
 		["[Tt][Aa][Bb][Ll][Ee]\\b", "return 'TABLE';"],
 		["[Ff][Rr][Oo][Mm]\\b", "return 'FROM';"],
@@ -36,7 +37,7 @@ var grammar = {
 	],
 	bnf: {
 		"expressions":  [["cmd EOF", "return $1;"]],
-		"cmd": [["select", "$$ = $1"], ["createtable", "$$ = $1"]],
+		"cmd": [["select", "$$ = $1"], ["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']}"], ["createtable", "$$ = $1"]],
 
 		"createtable": [["CREATE TABLE IDENTIFIER ( tabrowdefs )", "$$ = {type: 'createtable', id: $3, cols: $5};"]],
 		"tabrowdefs": [["", "$$ = [];"], ["tabrowdef", "$$ = [$1];"], ["tabrowdefs , tabrowdef", "$$ = $1; $$.push($3);"]],

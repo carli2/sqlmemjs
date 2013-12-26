@@ -13,4 +13,5 @@ printTable(db.query("SELECT 'Monika\\'s Imbiss'"));
 printTable(db.query("CREATE TABLE person(ID integer, Name string)"));
 printTable(db.query("SELECT * FROM tables"));
 printTable(db.query("SELECT tables.* FROM tables"));
+printTable(db.query("SHOW TABLES"));
 printTable(db.query("SELECT * FROM tables as t1, tables as `t2`"));
