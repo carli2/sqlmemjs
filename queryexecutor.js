@@ -53,6 +53,13 @@ function SQLinMemory() {
 				return i;
 		}
 	}
+	/*
+	Create function out of expression
+	@param id identifier of the row
+	@param code parsed JSON values of the expression
+	@param schema schema of the input tuple for that expression
+	@return {id: string, type: string, fn: function(tuples: JSON)=>value} compiled function
+	*/
 	function createFunction(id, code, schema) {
 		if(typeof code == 'object') {
 			if(code.id) {
@@ -68,6 +75,23 @@ function SQLinMemory() {
 					}
 				}
 				throw "Unknown identifier: " + code.id;
+			} else if(code.op) {
+				var a = code.a ? createFunction('', code.a, schema).fn : undefined;
+				var b = code.b ? createFunction('', code.b, schema).fn : undefined;
+				switch(code.op) {
+					case 'add':
+					return {
+						id: id,
+						type: "NUMBER",
+						fn: function(tuples) {
+							return a(tuples) + b(tuples);
+						}
+					}
+					break;
+
+					default:
+					throw "Unknown opcode " + code.op;
+				}
 			}
 		}
 		if(typeof code == 'number') {
@@ -223,7 +247,7 @@ function SQLinMemory() {
 	this.query = function(sql) {
 		// parse the query
 		var query = parser.parse(sql);
-		console.log(JSON.stringify(query));
+		console.log(sql + ' => ' + JSON.stringify(query));
 		// process queries
 		if(query.type == 'select') {
 			var from = null;
