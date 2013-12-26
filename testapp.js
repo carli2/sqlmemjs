@@ -11,6 +11,7 @@ printTable(db.query('SELECT 1 as a, 2 as b'));
 printTable(db.query("SELECT 'Monikas Imbiss'"));
 printTable(db.query("SELECT 'Monika\\'s Imbiss'"));
 printTable(db.query("CREATE TABLE person(ID integer, Name string)"));
+printTable(db.query("CREATE TABLE IF NOT EXISTS person(ID integer, Name string)"));
 printTable(db.query("SELECT * FROM tables"));
 printTable(db.query("SELECT tables.* FROM tables"));
 printTable(db.query("SHOW TABLES"));

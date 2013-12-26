@@ -327,14 +327,17 @@ function SQLinMemory() {
 			var table = getTableIterator(query.id);
 			if(table) {
 				table.close();
-				// TODO: flag IF NOT EXISTS
-				throw "Table " + query.id + " already exists";
+				// flag IF NOT EXISTS
+				if(query.erroronexists) {
+					throw "Table " + query.id + " already exists";
+				}
+			} else {
+				for(var i in query.cols) {
+					query.cols[i][1] = validateDatatype(query.cols[i][1]);
+				}
+				table = {id: query.id, schema: query.cols};
+				tables[query.id] = table;
 			}
-			for(var i in query.cols) {
-				query.cols[i][1] = validateDatatype(query.cols[i][1]);
-			}
-			table = {id: query.id, schema: query.cols};
-			tables[query.id] = table;
 			return new singleValue(query.id, 'STRING');
 		})();
 		throw "unknown command: " + JSON.stringify(query);
