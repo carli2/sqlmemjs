@@ -25,6 +25,21 @@ Build instructions
 2. Compile the parser and the minified library (<tt>make</tt>)
 3. Run the test cases (<tt>make run</tt>)
 
+How to use
+----------
+
+```
+var db = new SQLinMemory();
+db.query("CREATE TABLE x(id integer PRIMARY KEY AUTO_INCREMENT, name string DEFAULT 'New Item')");
+var id = db.query("INSERT INTO x(name) VALUES ('Carl')").insert_id;
+var rows = db.query("SELECT * FROM x");
+var row;
+console.log(JSON.stringify(rows.getSchema()));
+while(row = rows.fetch) {
+  console.log(JSON.stringify(row));
+}
+```
+
 Supported Commands
 ------------------
 

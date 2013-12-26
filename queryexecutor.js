@@ -382,6 +382,8 @@ function SQLinMemory() {
 					throw "Table " + query.id + " already exists";
 				}
 			} else {
+				var primary = undefined;
+				var cols = {};
 				// create table: verify col types
 				for(var i in query.cols) {
 					var typ = validateDatatype(query.cols[i].type);
@@ -397,9 +399,16 @@ function SQLinMemory() {
 						}
 						query.cols[i].default = code.fn({});
 					}
+					if(query.cols[i].primary) {
+						if(primary) {
+							throw "Two columns are marked primary: " + primary + " and " + query.cols[i].id;
+						}
+						primary = query.cols[i].id;
+					}
+					cols[query.cols[i].id] = query.cols[i];
 				}
 				// create data structure for table
-				table = {id: query.id, schema: query.cols, data: []};
+				table = {id: query.id, schema: query.cols, cols: cols, data: [], primary: primary};
 				tables[query.id] = table;
 			}
 			return new singleValue(query.id, 'STRING');
@@ -412,15 +421,12 @@ function SQLinMemory() {
 			var table = tables[tablename];
 			var cols = Array(query.cols.length);
 			for(var i in query.cols) {
-				for(var j in table.schema) {
-					if(query.cols[i].toUpperCase() == table.schema[j].id.toUpperCase()) {
-						cols[i] = table.schema[j].id;
-					}
-				}
+				cols[i] = convertStringForAttribute(query.cols[i], table.cols);
 				if(!cols[i]) {
 					throw "Table " + tablename + " has no column called " + query.cols[i];
 				}
 			}
+			var last_insert = 0;
 			for(var i in query.rows) {
 				var row = query.rows[i];
 				if(row.length != cols.length) {
@@ -453,12 +459,22 @@ function SQLinMemory() {
 							}
 						}
 					}
+					if(col.primary) {
+						// update insert_id
+						last_insert = tuple[col.id];
+					}
 				}
 				table.data.push(tuple);
 				// TODO: update all cursors to accept new item
-				// TODO: get insert_id (of primary)
 			}
-			return new singleValue(1, 'INTEGER');
+			var result;
+			if(table.primary) {
+				result = new singleValue(last_insert, table.cols[table.primary].type)
+				result.insert_id = last_insert;
+			} else {
+				result = new singleValue(0, 'INTEGER');
+			}
+			return result;
 		})();
 		throw "unknown command: " + JSON.stringify(query);
 	}
