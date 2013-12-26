@@ -21,6 +21,10 @@ var grammar = {
 		["[Pp][Rr][Ii][Mm][Aa][Rr][Yy]\\s+[Kk][Ee][Yy]\\b", "return 'PRIMARYKEY';"],
 		["[Aa][Uu][Tt][Oo]_[Ii][Nn][Cc][Rr][Ee][Mm][Ee][Nn][Tt]\\b", "return 'AUTO_INCREMENT';"],
 		["[Cc][Oo][Mm][Mm][Ee][Nn][Tt]\\b", "return 'COMMENT';"],
+		["[Ww][Hh][Ee][Rr][Ee]\\b", "return 'WHERE';"],
+		["[Nn][Oo][Tt]\\b", "return 'NOT';"],
+		["[Aa][Nn][Dd]\\b", "return 'AND';"],
+		["[Oo][Rr]\\b", "return 'OR';"],
 		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
 		["`.+?`", "return 'IDENTIFIER2';"],
@@ -30,6 +34,12 @@ var grammar = {
 		["\\*", "return '*';"],
 		["\\+", "return '+';"],
 		["-", "return '-';"],
+		["=", "return '=';"],
+		["<>", "return '<>';"],
+		[">", "return '>';"],
+		[">=", "return '>=';"],
+		["<", "return '<';"],
+		["<=", "return '<=';"],
 		["\\/", "return '/';"],
 		["\\(", "return '(';"],
 		["\\)", "return ')';"],
@@ -38,6 +48,10 @@ var grammar = {
 		]
 	},
 	operators: [
+		["left", "AND"],
+		["left", "OR"],
+		["left", "NOT"],
+		["left", "=", "<>", "<", "<=", ">", ">="],
 		["left", "+", "-"],
 		["left", "*", "/"],
 		["left", "^"],
@@ -73,8 +87,13 @@ var grammar = {
 
 		// syntax of select
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
-		"select2": [["select1", "$$ = $1"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
-		"select": [["select2", "$$ = $1;"]],
+		"select2": [["select1", "$$ = $1;"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
+		"select3": [["select2", "$$ = $1;"], ["select2 WHERE c", "$$ = $1; $$.where = $3;"]],
+		// TODO: GROUP BY
+		// TODO: HAVING
+		// TODO: ORDER BY
+		// TODO: LIMIT
+		"select": [["select3", "$$ = $1;"]],
 
 		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = [yytext, $1];"],
 			["*", "$$ = '';"], ["IDENTIFIER . *", "$$ = $1;"]],
@@ -96,6 +115,17 @@ var grammar = {
 			["IDENTIFIER", "$$ = {id: $1};"],
 			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"],
 			["?", "$$ = {wildcard: true};"]
+		],
+		"c": [
+			["e = e", "$$ = {cmp: '=', a: $1, b: $3};"],
+			["e <> e", "$$ = {cmp: '<>', a: $1, b: $3};"],
+			["e < e", "$$ = {cmp: '<', a: $1, b: $3};"],
+			["e <= e", "$$ = {cmp: '<=', a: $1, b: $3};"],
+			["e > e", "$$ = {cmp: '>', a: $1, b: $3};"],
+			["e >= e", "$$ = {cmp: '>=', a: $1, b: $3};"],
+			["c AND c", "$$ = {op: 'and', a: $1, b: $3};"],
+			["c OR c", "$$ = {op: 'or', a: $1, b: $3};"],
+			["NOT c", "$$ = {op: 'not', a: $2};"]
 		],
 		"IDENTIFIER": [
 			["IDENTIFIER1", "$$ = $1;"],

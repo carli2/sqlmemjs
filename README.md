@@ -51,6 +51,7 @@ Supported Commands
 - SELECT \* FROM table1, table2
 - SELECT table1.\*, table2.col FROM table1, table2
 - SELECT col1, col2+col3 FROM table
+- SELECT * FROM table WHERE ID=?
 
 Supported Data Types
 --------------------

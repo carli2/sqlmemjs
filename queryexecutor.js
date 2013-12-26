@@ -122,10 +122,86 @@ function SQLinMemory() {
 		}
 	}
 	/*
+	Create condition out of expression
+	@param id identifier of the row
+	@param code parsed JSON values of the condition
+	@param schema schema of the input tuple for that expression
+	@param args wildcard arguments
+	@return {id: string, type: string, fn: function(tuples: JSON)=>value} compiled function
+	*/
+	function createCondition(id, code, schema, args) {
+		if(code.op) {
+			var a = code.a ? createCondition('', code.a, schema, args) : undefined;
+			var b = code.b ? createCondition('', code.b, schema, args) : undefined;
+			switch(code.op) {
+				case 'and':
+				return function(tuples) {
+						return a(tuples) && b(tuples);
+					}
+				break;
+				case 'or':
+				return function(tuples) {
+						return a(tuples) || b(tuples);
+					}
+				break;
+				case 'not':
+				return function(tuples) {
+						return !a(tuples);
+					}
+				break;
+
+				default:
+				throw "Unknown opcode " + code.op;
+			}
+		}
+		if(code.cmp) {
+			var a = code.a ? createFunction('', code.a, schema, args).fn : undefined;
+			var b = code.b ? createFunction('', code.b, schema, args).fn : undefined;
+			switch(code.cmp) {
+				case '=':
+				return function(tuples) {
+						return a(tuples) == b(tuples);
+					}
+				break;
+				case '<>':
+				return function(tuples) {
+						return a(tuples) != b(tuples);
+					}
+				break;
+				case '<':
+				return function(tuples) {
+						return a(tuples) < b(tuples);
+					}
+				break;
+				case '<=':
+				return function(tuples) {
+						return a(tuples) <= b(tuples);
+					}
+				break;
+				case '>':
+				return function(tuples) {
+						return a(tuples) > b(tuples);
+					}
+				break;
+				case '>=':
+				return function(tuples) {
+						return a(tuples) >= b(tuples);
+					}
+				break;
+
+				default:
+				throw "Unknown opcode " + code.cmp;
+			}
+		}
+		// Default
+		return function(t){return true;}
+	}
+	/*
 	Create function out of expression
 	@param id identifier of the row
 	@param code parsed JSON values of the expression
 	@param schema schema of the input tuple for that expression
+	@param args wildcard arguments
 	@return {id: string, type: string, fn: function(tuples: JSON)=>value} compiled function
 	*/
 	function createFunction(id, code, schema, args) {
@@ -164,6 +240,7 @@ function SQLinMemory() {
 						}
 					}
 					break;
+					// TODO: other arithmetic operations
 
 					default:
 					throw "Unknown opcode " + code.op;
@@ -284,34 +361,49 @@ function SQLinMemory() {
 		}
 	}
 	/*
-	Adjunction: do calculation on cols
+	Map: remap tuple values
 	*/
-	function Adjunction(table, cols, args) {
-		var t = table;
-		var c = [];
-		for(var i in cols) {
-			// id, fn, type
-			c.push(createFunction(cols[i][0], cols[i][1], table.getSchema(), args)); // id, code, schema
-		}
+	function Map(table, schema, fn) {
 		this.reset = function() {
-			t.reset();
+			table.reset();
 		}
 		this.close = function() {
-			t.close();
+			table.close();
 		}
 		this.getSchema = function() {
-			var r = [];
-			for(var i in c) r.push([c[i].id, c[i].type]);
-			return r;
+			return schema;
 		}
 		this.fetch = function() {
-			var tuple = t.fetch();
-			if(!tuple) return tuple;
-			var result = {};
-			for(var i in c) {
-				result[c[i].id] = c[i].fn(tuple);
+			var tuple = table.fetch();
+			if(tuple) return fn(tuple);
+		}
+	}
+	/*
+	Filter: only pass accepting tuples
+	*/
+	function Filter(table, fn) {
+		this.reset = function() {
+			table.reset();
+		}
+		this.close = function() {
+			table.close();
+		}
+		this.getSchema = function() {
+			return table.getSchema;
+		}
+		this.fetch = function() {
+			while(true) {
+				var tuple = table.fetch();
+				if(!tuple) {
+					// reached end of tuples
+					return undefined;
+				}
+				if(fn(tuple)) {
+					// return accepted tuple
+					return tuple;
+				}
+				// fetch next element
 			}
-			return result;
 		}
 	}
 	/*
@@ -348,8 +440,6 @@ function SQLinMemory() {
 				// Single Select
 				from = new singleValue(1, 'INTEGER');
 			}
-			// TODO: WHERE-Filter (and find index checks)
-			from = from;
 			// Adjunction/Projection: walk through values to select
 			var cols = [];
 			for(var i in query.expr) {
@@ -378,12 +468,30 @@ function SQLinMemory() {
 					cols.push(query.expr[i]);
 				}
 			}
-			// compile calculations
-			from = new Adjunction(from, cols, args);
+			var newtuple = {}, schema = [];
+			// compile calculations first (wildcard order)
+			for(var i in cols) {
+				var f = createFunction(cols[i][0], cols[i][1], from.getSchema(), args);
+				newtuple[f.id] = f.fn;
+				schema.push([f.id, f.type]);
+			}
+			// WHERE-Filter (and find index checks) (wildcard order)
+			if(query.where) {
+				from = new Filter(from, createCondition(from, query.where, from.getSchema(), args));
+			}
+			// SELECT XYZ-Mapping
+			var table = new Map(from, schema, function(inp) {
+				var outp = {};
+				// iterate over all cols
+				for(var i in newtuple) {
+					outp[i] = newtuple[i](inp);
+				}
+				return outp;
+			});
 			// TODO: Group by
 			// TODO: Having
 			// TODO: Order
-			return from;
+			return table;
 		})(); else if(query.type == 'createtable') return (function(){
 			// CREATE TABLE: check if table already exists
 			var table = getTableIterator(query.id);

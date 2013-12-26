@@ -19,5 +19,7 @@ printTable(db.query("SELECT * FROM tables as t1, tables as `t2`"));
 printTable(db.query("INSERT INTO person(Name, age) VALUES (?, 15), (?, 88)", "Hans", "Anton"));
 printTable(db.query("INSERT INTO person(Name, AGE) VALUES (?, ?)", 'Paul', 55));
 var hanna = db.query("INSERT INTO person(Name) VALUES ('Hanna')").insert_id;
-printTable(db.query("SELECT * FROM `person`"));
+printTable(db.query("SELECT ?, * FROM `person` WHERE ID=?", 'Info', hanna));
 //printTable(db.query("UPDATE person SET Name='Eva' WHERE id=?", hanna));
+printTable(db.query("SELECT * FROM `person`"));
+printTable(db.query("SELECT * FROM `person` WHERE age > 30"));
