@@ -1,2 +1,4 @@
 node_modules
 sqlparser.js
+sqlinmem.js
+sqlinmem.min.js

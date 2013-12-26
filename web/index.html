@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SQL inMemory.js</title>
+    <link rel="stylesheet" href="css/main.css" type="text/css" />
+    <script type='text/javascript' src='../sqlinmem.min.js'></script>
+  </head>
+  <body>
+   <h1>SQL inMemory.js</h1>
+   <div id='queries'></div>
+   <h2>Execute your own queries</h2>
+   <input type='text' id='query' value='select 1+2' onkeydown=''><button id='querybtn'>Execute</button>
+   <script type='text/javascript'>
+    function htmlentities(text) {
+	        return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function printHTMLTable(iterator) {
+	    var schema = iterator.getSchema();
+	    var s = '<table border="1">';
+	    // Head
+	    s += '<tr>';
+	    for(var i in schema) {
+		    s += '<th><b>' + htmlentities(schema[i][0]) + '</b><br/><i>' + htmlentities(schema[i][1]) + '</i></th>';
+	    }
+	    s += '</tr>';
+	    // Lines
+	    var line;
+	    while(line = iterator.fetch()) {
+		    for(var i in schema) {
+			    s += '<td>' + htmlentities(line[schema[i][0]]) + '</td>';
+		    }
+	    }
+	    s += '</table>';
+	    return s;
+    }
+    var db = new SQLinMemory();
+    function evaluate(sql) {
+	    var q = document.getElementById('queries');
+	    var d = document.createElement('div');
+	    q.appendChild(d);
+	    var result;
+	    try {
+		    result = printHTMLTable(db.query(sql));
+	    } catch(err) {
+		    result = String(err);
+		    result = '<pre>'+htmlentities(result).replace('\n', '<br/>')+'</pre>';
+	    }
+	    d.innerHTML = '<h2>'+htmlentities(sql)+'</h2>' + (result);
+    }
+    evaluate("SELECT 1+2 AS sum");
+    evaluate("SELECT * FROM tables");
+    var query = document.getElementById('query');
+    var querybtn = document.getElementById('querybtn');
+    query.onkeypress = function(e) {
+	    if(e.keyCode == 13) {
+		    querybtn.click();
+	    }
+    };
+    querybtn.onclick = function() {
+	    evaluate(query.value);
+    }
+   </script>
+  </body>
+</html>

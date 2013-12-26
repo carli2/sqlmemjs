@@ -21,8 +21,8 @@ Planned features
 Build instructions
 ------------------
 
-1. Install jison (<tt>npm install jison</tt>)
-2. Compile the parser (<tt>make</tt>)
+1. Install dependencies (<tt>make deps</tt>)
+2. Compile the parser and the minified library (<tt>make</tt>)
 3. Run the test cases (<tt>make run</tt>)
 
 

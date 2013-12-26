@@ -1,5 +1,6 @@
-var SQLinMemory = require('./queryexecutor').SQLinMemory;
-var printTable = require('./queryexecutor').printTable;
+var sql = require('./queryexecutor');
+var SQLinMemory = sql.SQLinMemory;
+var printTable = sql.printTable;
 
 var db = new SQLinMemory();
 
