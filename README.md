@@ -35,7 +35,7 @@ var id = db.query("INSERT INTO x(name) VALUES ('Carl')").insert_id;
 var rows = db.query("SELECT * FROM x");
 var row;
 console.log(JSON.stringify(rows.getSchema()));
-while(row = rows.fetch) {
+while(row = rows.fetch()) {
   console.log(JSON.stringify(row));
 }
 ```
