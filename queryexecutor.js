@@ -14,6 +14,23 @@ A storage backend has to implement that interface. Also all relational operation
 */
 
 function SQLinMemory() {
+	var datatypes = {
+		'INTEGER': 'NUMBER',
+		'NUMBER': 'NUMBER',
+		'FLOAT': 'NUMBER',
+		'DOUBLE': 'NUMBER',
+		'TEXT': 'TEXT',
+		'STRING': 'TEXT',
+		'DATE': 'DATE'
+	};
+	function validateDatatype(type) {
+		type = type.toUpperCase();
+		if(!datatypes.hasOwnProperty(type)) {
+			throw "unknown data type: " + type;
+		}
+		return datatypes[type];
+	}
+
 	var tables = {};
 
 	function tableIterator() {
@@ -44,6 +61,11 @@ function SQLinMemory() {
 		this.getSchema = function() {
 			return [['IDENTIFIER', 'TEXT']];
 		}
+	}
+	function getTableIterator(identifier) {
+		if(identifier.toUpperCase() == 'TABLES')
+			return new tableIterator();
+		// TODO: also return tables
 	}
 	function convertStringForAttribute(str, obj) {
 		if(obj.hasOwnProperty(str)) return str;
@@ -236,11 +258,6 @@ function SQLinMemory() {
 			return result;
 		}
 	}
-	function getTableIterator(identifier) {
-		if(identifier.toUpperCase() == 'TABLES')
-			return new tableIterator();
-		// TODO: also return tables
-	}
 	/*
 	Main query method
 	*/
@@ -249,7 +266,7 @@ function SQLinMemory() {
 		var query = parser.parse(sql);
 		console.log(sql + ' => ' + JSON.stringify(query));
 		// process queries
-		if(query.type == 'select') {
+		if(query.type == 'select') return (function(){
 			var from = null;
 			if(query.from) {
 				var tables = query.from;
@@ -306,7 +323,21 @@ function SQLinMemory() {
 			// TODO: Having
 			// TODO: Order
 			return from;
-		}
+		})(); else if(query.type == 'createtable') return (function(){
+			var table = getTableIterator(query.id);
+			if(table) {
+				table.close();
+				// TODO: flag IF NOT EXISTS
+				throw "Table " + query.id + " already exists";
+			}
+			for(var i in query.cols) {
+				query.cols[i][1] = validateDatatype(query.cols[i][1]);
+			}
+			table = {id: query.id, schema: query.cols};
+			tables[query.id] = table;
+			return new singleValue(query.id, 'STRING');
+		})();
+		throw "unknown command: " + JSON.stringify(query);
 	}
 }
 
@@ -327,6 +358,7 @@ function printTable(table, print) {
 		}
 		print(line);
 	}
+	print('');
 }
 
 if(typeof exports) {

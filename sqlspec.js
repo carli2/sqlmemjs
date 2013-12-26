@@ -4,14 +4,19 @@ var grammar = {
 	lex: {
 		"rules": [
 		["\\s+", "" /* skop whitespace */],
+		// literals
 		["[0-9]+", "return 'NUMBER';"],
 		["'(\\\\'|.)*?'", "return 'STRING';"],
-		// this is since JS Regex does not support (?i)
-		["[Ss][Ee][Ll][Ee][Cc][Tt]", "return 'SELECT';"],
-		["[Aa][Ss]", "return 'AS';"],
-		["[Ff][Rr][Oo][Mm]", "return 'FROM';"],
+		// reserved words: this is since JS Regex does not support (?i)
+		["[Ss][Ee][Ll][Ee][Cc][Tt]\\b", "return 'SELECT';"],
+		["[Aa][Ss]\\b", "return 'AS';"],
+		["[Cc][Rr][Ee][Aa][Tt][Ee]\\b", "return 'CREATE';"],
+		["[Tt][Aa][Bb][Ll][Ee]\\b", "return 'TABLE';"],
+		["[Ff][Rr][Oo][Mm]\\b", "return 'FROM';"],
+		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
 		["`.+?`", "return 'IDENTIFIER2';"],
+		// symbols
 		[",", "return ',';"],
 		["\\.", "return '.';"],
 		["\\*", "return '*';"],
@@ -31,7 +36,12 @@ var grammar = {
 	],
 	bnf: {
 		"expressions":  [["cmd EOF", "return $1;"]],
-		"cmd": [["select", "$$ = $1"]],
+		"cmd": [["select", "$$ = $1"], ["createtable", "$$ = $1"]],
+
+		"createtable": [["CREATE TABLE IDENTIFIER ( tabrowdefs )", "$$ = {type: 'createtable', id: $3, cols: $5};"]],
+		"tabrowdefs": [["", "$$ = [];"], ["tabrowdef", "$$ = [$1];"], ["tabrowdefs , tabrowdef", "$$ = $1; $$.push($3);"]],
+		"tabrowdef": [["IDENTIFIER IDENTIFIER", "$$ = [$1, $2];"]],
+
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
 		"select2": [["select1", "$$ = $1"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
 		"select": [["select2", "$$ = $1;"]],
