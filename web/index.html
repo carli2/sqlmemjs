@@ -27,9 +27,11 @@
 	    // Lines
 	    var line;
 	    while(line = iterator.fetch()) {
+		    s += '<tr>';
 		    for(var i in schema) {
 			    s += '<td>' + htmlentities(line[schema[i][0]]) + '</td>';
 		    }
+		    s += '</tr>';
 	    }
 	    s += '</table>';
 	    return s;

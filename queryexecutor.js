@@ -396,6 +396,7 @@ function SQLinMemory() {
 			var table = tables[tablename];
 			var cols = Array(query.cols);
 			for(var i in query.cols) {
+				cols[i] = undefined;
 				for(var j in table.schema) {
 					if(query.cols[i].toUpperCase() == table.schema[j][0].toUpperCase()) {
 						cols[i] = table.schema[j][0];
@@ -413,7 +414,6 @@ function SQLinMemory() {
 				var tuple = {};
 				for(var j in row) {
 					// compile code of the insert query
-					console.log(code);
 					var code = createFunction(cols[j], row[j], []);
 					tuple[code.id] = code.fn({}); // fill the tuples
 				}
