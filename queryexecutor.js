@@ -31,9 +31,15 @@ function SQLinMemory() {
 		return datatypes[type];
 	}
 
+	/*
+	Data structure holding all tables
+	*/
 	var tables = {};
 
-	function tableIterator() {
+	/*
+	Iterator that iterates over all tables (SHOW TABLES)
+	*/
+	function tablesIterator() {
 		var keys, cursor;
 		this.reset = function() {
 			keys = ['TABLES'];
@@ -62,17 +68,53 @@ function SQLinMemory() {
 			return [['IDENTIFIER', 'TEXT']];
 		}
 	}
-	function getTableIterator(identifier) {
-		if(identifier.toUpperCase() == 'TABLES')
-			return new tableIterator();
-		// TODO: also return tables
+	/*
+	Iterator that iterates over all tuples of one table
+	*/
+	function tableIterator(table) {
+		var cursor;
+		this.reset = function() {
+			cursor = 0;
+		};
+		this.reset();
+		// TODO: register INSERT/DELETE-observer in table
+		// in order to keep cursor stability
+		this.close = function() {
+			// TODO: unregister observer in table
+		}
+		this.fetch = function() {
+			if(cursor < table.data.length) {
+				// fetch one row
+				var tuple = table.data[cursor];
+				// move cursor one further
+				cursor++;
+				return tuple;
+			}
+		}
+		this.getSchema = function() {
+			return table.schema;
+		}
 	}
+	/*
+	Find element of object and return attribute name with correct case
+	*/
 	function convertStringForAttribute(str, obj) {
 		if(obj.hasOwnProperty(str)) return str;
 		str = str.toUpperCase();
 		for(var i in obj) {
 			if(i.toUpperCase() == str)
 				return i;
+		}
+	}
+	/*
+	Get the iterator for a table name
+	*/
+	function getTableIterator(identifier) {
+		if(identifier.toUpperCase() == 'TABLES')
+			return new tablesIterator();
+		var tablename = convertStringForAttribute(identifier, tables);
+		if(tablename) {
+			return new tableIterator(tables[tablename]);
 		}
 	}
 	/*
@@ -138,7 +180,9 @@ function SQLinMemory() {
 		};
 	}
 	/*
-	Single value select
+	Single value select (1 row, 1 col)
+	@param value value to return
+	@param type type of that one value
 	*/
 	function singleValue(value, type) {
 		var count = 0;
@@ -290,10 +334,10 @@ function SQLinMemory() {
 			}
 			// TODO: WHERE-Filter (and find index checks)
 			from = from;
-			// Adjunction/Projection
+			// Adjunction/Projection: walk through values to select
 			var cols = [];
 			for(var i in query.expr) {
-				if(query.expr[i] == '') {
+				if(query.expr[i] === '') {
 					// select *
 					var schema = from.getSchema();
 					for(var j in schema) {
@@ -318,12 +362,14 @@ function SQLinMemory() {
 					cols.push(query.expr[i]);
 				}
 			}
+			// compile calculations
 			from = new Adjunction(from, cols);
 			// TODO: Group by
 			// TODO: Having
 			// TODO: Order
 			return from;
 		})(); else if(query.type == 'createtable') return (function(){
+			// CREATE TABLE: check if table already exists
 			var table = getTableIterator(query.id);
 			if(table) {
 				table.close();
@@ -332,10 +378,12 @@ function SQLinMemory() {
 					throw "Table " + query.id + " already exists";
 				}
 			} else {
+				// create table: verify col types
 				for(var i in query.cols) {
 					query.cols[i][1] = validateDatatype(query.cols[i][1]);
 				}
-				table = {id: query.id, schema: query.cols};
+				// create data structure for table
+				table = {id: query.id, schema: query.cols, data: []};
 				tables[query.id] = table;
 			}
 			return new singleValue(query.id, 'STRING');

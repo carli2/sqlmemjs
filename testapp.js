@@ -16,3 +16,4 @@ printTable(db.query("SELECT * FROM tables"));
 printTable(db.query("SELECT tables.* FROM tables"));
 printTable(db.query("SHOW TABLES"));
 printTable(db.query("SELECT * FROM tables as t1, tables as `t2`"));
+printTable(db.query("SELECT * FROM `person`"));
