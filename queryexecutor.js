@@ -387,6 +387,54 @@ function SQLinMemory() {
 				tables[query.id] = table;
 			}
 			return new singleValue(query.id, 'STRING');
+		})(); else if(query.type == 'insert') return (function(){
+			// INSERT ...
+			var tablename = convertStringForAttribute(query.table, tables);
+			if(!tablename) {
+				throw "Table " + query.table + " does not exist";
+			}
+			var table = tables[tablename];
+			var cols = Array(query.cols);
+			for(var i in query.cols) {
+				for(var j in table.schema) {
+					if(query.cols[i].toUpperCase() == table.schema[j][0].toUpperCase()) {
+						cols[i] = table.schema[j][0];
+					}
+				}
+				if(!cols[i]) {
+					throw "Table " + tablename + " has no column called " + query.cols[i];
+				}
+			}
+			for(var i in query.rows) {
+				var row = query.rows[i];
+				if(row.length != cols.length) {
+					throw "INSERT row has wrong number of elements";
+				}
+				var tuple = {};
+				for(var j in row) {
+					// compile code of the insert query
+					console.log(code);
+					var code = createFunction(cols[j], row[j], []);
+					tuple[code.id] = code.fn({}); // fill the tuples
+				}
+				// fill default values and auto_increment
+				for(var j in table.schema) {
+					var col = table.schema[j];
+					if(!tuple[col[0]]) {
+						// col default
+						// TODO: auto_increment
+						if(col[1] === 'STRING') {
+							tuple[col[0]] = '';
+						} else if(col[1] === 'NUMBER') {
+							tuple[col[0]] = 0;
+						}
+					}
+				}
+				table.data.push(tuple);
+				// TODO: update all cursors to accept new item
+				// TODO: get insert_id (of primary)
+			}
+			return new singleValue(1, 'INTEGER');
 		})();
 		throw "unknown command: " + JSON.stringify(query);
 	}

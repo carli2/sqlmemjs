@@ -15,6 +15,8 @@ var grammar = {
 		["[Tt][Aa][Bb][Ll][Ee]\\b", "return 'TABLE';"],
 		["[Ii][Ff]\\s+[Nn][Oo][Tt]\\s+[Ee][Xx][Ii][Ss][Tt][Ss]\\b", "return 'IFNOTEXISTS';"],
 		["[Ff][Rr][Oo][Mm]\\b", "return 'FROM';"],
+		["[Ii][Nn][Ss][Ee][Rr][Tt]\\s+[Ii][Nn][Tt][Oo]\\b", "return 'INSERTINTO';"],
+		["[Vv][Aa][Ll][Uu][Ee][Ss]\\b", "return 'VALUES';"],
 		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
 		["`.+?`", "return 'IDENTIFIER2';"],
@@ -39,12 +41,24 @@ var grammar = {
 	bnf: {
 		// detecting the type of command
 		"expressions":  [["cmd EOF", "return $1;"]],
-		"cmd": [["select", "$$ = $1"], ["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']}"], ["createtable", "$$ = $1"]],
+		"cmd": [
+			["select", "$$ = $1;"],
+			["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']};"],
+			["createtable", "$$ = $1;"],
+			["insert", "$$ = $1;"]
+		],
 
 		// table creation syntax
 		"createtable": [["CREATE TABLE IDENTIFIER ( tabrowdefs )", "$$ = {type: 'createtable', id: $3, cols: $5, erroronexists: true};"], ["CREATE TABLE IFNOTEXISTS IDENTIFIER ( tabrowdefs )", "$$ = {type: 'createtable', id: $4, cols: $6};"]],
 		"tabrowdefs": [["", "$$ = [];"], ["tabrowdef", "$$ = [$1];"], ["tabrowdefs , tabrowdef", "$$ = $1; $$.push($3);"]],
 		"tabrowdef": [["IDENTIFIER IDENTIFIER", "$$ = [$1, $2];"]],
+
+		// insert syntax
+		"insert": [["INSERTINTO IDENTIFIER ( idlist ) VALUES insertrows", "$$ = {type: 'insert', table: $2, cols: $4, rows: $7};"]],
+		"idlist": [["", "$$ = [];"], ["IDENTIFIER", "$$ = [$1];"], ["idlist , IDENTIFIER", "$$ = $1; $$.push($3);"]],
+		"insertrows": [["insertrow", "$$ = [$1];"], ["insertrows , insertrow", "$$ = $1; $$.push($3);"]],
+		"insertrow": [["( valuelist )", "$$ = $2;"]],
+		"valuelist": [["e", "$$ = [$1];"], ["valuelist , e", "$$ = $1; $$.push($3);"]],
 
 		// syntax of select
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
