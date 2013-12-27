@@ -67,6 +67,8 @@ Supported Commands
 - SELECT table1.\*, table2.col FROM table1, table2
 - SELECT col1, col2+col3 FROM table
 - SELECT * FROM table WHERE ID=?
+- SELECT 1/2 UNION SELECT 1+2
+- SELECT a+b FROM (SELECT 1 as a, 2 as b)
 
 Supported Data Types
 --------------------

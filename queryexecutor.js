@@ -552,9 +552,16 @@ function SQLinMemory() {
 			if(query.from) {
 				var tables = query.from;
 				for(var t in tables) {
-					var iterator = getTableIterator(tables[t]);
-					if(!iterator) {
-						throw "Table does not exist: " + tables[t];
+					var iterator;
+					if(typeof tables[t] === 'string') {
+						// named table
+						iterator = getTableIterator(tables[t]);
+						if(!iterator) {
+							throw "Table does not exist: " + tables[t];
+						}
+					} else {
+						// nested select
+						iterator = self.query(tables[t]);
 					}
 					iterator = new renameSchema(iterator, t);
 					tables[t] = iterator;

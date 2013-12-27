@@ -8,6 +8,7 @@ printTable(db.query('SELECT 1+2'));
 printTable(db.query('SELECT 1+2 AS sum'));
 printTable(db.query('SELECT 2+2*2 as sum'));
 printTable(db.query('SELECT -1*3 as a, 3/4 as b'));
+printTable(db.query('SELECT a+b FROM (SELECT -1*3 as a, 3/4 as b)'));
 printTable(db.query("SELECT 'Monikas Imbiss' UNION SELECT 'abc123'"));
 printTable(db.query("SELECT 'Monika\\'s Imbiss'"));
 printTable(db.query("CREATE TABLE IF NOT EXISTS person(ID integer PRIMARY KEY AUTO_INCREMENT, Name string COMMENT 'Name of the Person', Age NUMBER DEFAULT 18)"));
