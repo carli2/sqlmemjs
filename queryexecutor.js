@@ -14,6 +14,8 @@ A storage backend has to implement that interface. Also all relational operation
 */
 
 function SQLinMemory() {
+	var self = this;
+
 	var datatypes = {
 		'INTEGER': 'NUMBER',
 		'NUMBER': 'NUMBER',
@@ -372,6 +374,38 @@ function SQLinMemory() {
 			return tuple;
 		}
 	}
+	/*
+	Union of two iterators
+	*/
+	function Union(a, b) {
+		(function(){
+			// validate schema
+			var sa = a.getSchema();
+			var sb = b.getSchema();
+			if(sa.length != sb.length) {
+				throw "Incompatible count of columns for UNION";
+			}
+			for(var i = 0; i < sa.length; i++) {
+				if(validateDatatype(sa[i][1]) != validateDatatype(sb[i][1])) {
+					throw "Incompatible column " + sb[i][0] + " with type " + sb[i][1];
+				}
+			}
+		})();
+		this.reset = function() {
+			a.reset();
+			b.reset();
+		}
+		this.close = function() {
+			a.close();
+			b.close();
+		}
+		this.getSchema = function() {
+			return a.getSchema();
+		}
+		this.fetch = function() {
+			return a.fetch() || b.fetch();
+		}
+	}
 	// add name to a tables identifiers
 	function renameSchema(table, prefix) {
 		var t = table, p = prefix;
@@ -540,6 +574,11 @@ function SQLinMemory() {
 			// TODO: Having
 			// TODO: Order
 			return table;
+		})(); else if(query.type == 'union') return (function(){
+			// TODO: handle arguments
+			var a = self.query(query.a);
+			var b = self.query(query.b);
+			return new Union(a, b);
 		})(); else if(query.type == 'createtable') return (function(){
 			// CREATE TABLE: check if table already exists
 			var table = getTableIterator(query.id);

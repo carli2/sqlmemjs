@@ -9,7 +9,7 @@ var grammar = {
 		["'(\\\\'|.)*?'", "return 'STRINGX';"],
 		// reserved words: this is since JS Regex does not support (?i)
 		["[Ss][Ee][Ll][Ee][Cc][Tt]\\b", "return 'SELECT';"],
-		// TODO: UNION
+		["[Uu][Nn][Ii][Oo][Nn]\\b", "return 'UNION';"],
 		["[Aa][Ss]\\b", "return 'AS';"],
 		["[Ss][Hh][Oo][Ww]\\s+[Tt][Aa][Bb][Ll][Ee][Ss]\\b", "return 'SHOWTABLES';"],
 		["[Cc][Rr][Ee][Aa][Tt][Ee]\\b", "return 'CREATE';"],
@@ -60,6 +60,7 @@ var grammar = {
 		]
 	},
 	operators: [
+		["left", "UNION"],
 		["left", "AND"],
 		["left", "OR"],
 		["left", "NOT"],
@@ -114,7 +115,7 @@ var grammar = {
 		// TODO: HAVING
 		// TODO: ORDER BY
 		// TODO: LIMIT
-		"select": [["select3", "$$ = $1;"]],
+		"select": [["select3", "$$ = $1;"], ["select UNION select", "$$ = {type: 'union', a: $1, b: $3};"]],
 
 		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = ['', $1];"],
 			["*", "$$ = '';"], ["IDENTIFIER . *", "$$ = $1;"]],
