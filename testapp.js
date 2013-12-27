@@ -27,3 +27,5 @@ printTable(db.query("UPDATE person SET Name='Eva', Age = Age+1 WHERE id=?", hann
 printTable(db.query("SELECT * FROM `person`"));
 printTable(db.query("SELECT *, ? FROM `person` WHERE age > ?", 12, 30));
 printTable(db.query("SELECT Name, (SELECT age+?) as nextage FROM `person`", 2));
+printTable(db.query("DELETE * FROM `person` WHERE id=?", hanna));
+printTable(db.query("SELECT * FROM `person`"));

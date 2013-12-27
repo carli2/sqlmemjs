@@ -74,25 +74,50 @@ function SQLinMemory() {
 	Iterator that iterates over all tuples of one table
 	*/
 	function tableIterator(table) {
-		var cursor;
-		this.reset = function() {
-			cursor = 0;
+		this.cursor = 0;
+		var self = this;
+		// observer that moves the cursor with deletions
+		var observer = {
+			active: false,
+			insert: function(idx) {
+			},
+			remove: function(idx) {
+				// a row is deleted so we have to step back
+				if(idx < self.cursor) {
+					self.cursor--;
+				}
+			},
+			setActive: function(active) {
+				if(active && !this.active) {
+					// register
+					table.cursors.push(observer);
+					this.active = active;
+				}
+				if(!active && this.active) {
+					// unregister
+					table.cursors.splice(table.cursors.indexOf(observer), 1);
+					this.active = active;
+				}
+			}
 		};
-		this.reset();
-		// TODO: register INSERT/DELETE-observer in table
-		// in order to keep cursor stability
+		this.reset = function() {
+			this.cursor = 0;
+		};
 		this.close = function() {
-			// TODO: unregister observer in table
+			// unregister observer in table
+			observer.setActive(false);
 			// but also keep in mind that users might restart with reset
 		}
 		this.fetch = function() {
-			if(cursor < table.data.length) {
+			if(this.cursor < table.data.length) {
 				// fetch one row
-				var tuple = table.data[cursor];
+				var tuple = table.data[this.cursor];
 				// move cursor one further
-				cursor++;
+				this.cursor++;
+				// observe changes as we move forward
+				observer.setActive(true);
 				return tuple;
-			}
+			} else observer.setActive(false);
 		}
 		this.getSchema = function() {
 			var schema = [];
@@ -596,6 +621,9 @@ function SQLinMemory() {
 				}
 				walkThrough(query.where);
 			}
+			if(query.type === 'delete') {
+				walkThrough(query.where);
+			}
 		}
 		walkThrough(query);
 		return query;
@@ -747,7 +775,7 @@ function SQLinMemory() {
 					cols[query.cols[i].id] = query.cols[i];
 				}
 				// create data structure for table
-				table = {id: query.id, schema: query.cols, cols: cols, data: [], primary: primary};
+				table = {id: query.id, schema: query.cols, cols: cols, data: [], primary: primary, cursors: []};
 				tables[query.id] = table;
 			}
 			return new singleValue(query.id, 'STRING');
@@ -805,8 +833,12 @@ function SQLinMemory() {
 					}
 				}
 				table.data.push(tuple);
-				// TODO: update all cursors to accept new item
+				// update all cursors to accept new item
+				for(var j = 0; j < table.cursors.length; j++) {
+					table.cursors[j].insert(table.data.length-1);
+				}
 			}
+			// TODO: update indexes
 			var result;
 			if(table.primary) {
 				result = new singleValue(last_insert, table.cols[table.primary].type)
@@ -855,8 +887,36 @@ function SQLinMemory() {
 			var result = new singleValue(count, 'NUMBER');
 			result.num_rows = count;
 			return result;
+		})(); else if(query.type == 'delete') return (function(){
+			// DELETE
+			var tablename = convertStringForAttribute(query.table, tables);
+			if(!tablename) {
+				throw "Table " + query.table + " does not exist";
+			}
+			var table = tables[tablename];
+			var tablei = new tableIterator(table);
+			var iterator = tablei;
+			if(query.where) {
+				// Filter tuples by WHERE-Condition
+				iterator = new Filter(iterator, createCondition(iterator, query.where, iterator.getSchema(), args));
+			}
+			var tuple, count = 0;
+			// now remove all tuples that we find
+			while(tuple = iterator.fetch()) {
+				// take the cursor of the underlyign table iterator
+				var index = tablei.cursor-1;
+				// remove the data item
+				table.data.splice(index, 1);
+				// notify all cursors
+				for(var i = 0; i < table.cursors.length; i++) {
+					table.cursors[i].remove(index);
+				}
+				count++;
+			}
+			var result = new singleValue(count, 'NUMBER');
+			result.num_rows = count;
+			return result;
 		})();
-		// TODO: DELETE
 		throw "unknown command: " + JSON.stringify(query);
 	}
 }

@@ -28,6 +28,7 @@ var grammar = {
 		["[Cc][Oo][Mm][Mm][Ee][Nn][Tt]\\b", "return 'COMMENT';"],
 		["[Uu][Pp][Dd][Aa][Tt][Ee]\\b", "return 'UPDATE';"],
 		["[Ss][Ee][Tt]\\b", "return 'SET';"],
+		["[Dd][Ee][Ll][Ee][Tt][Ee]\\b", "return 'DELETE';"],
 		["[Ww][Hh][Ee][Rr][Ee]\\b", "return 'WHERE';"],
 		// TODO: GROUP BY
 		// TODO: HAVING
@@ -78,6 +79,7 @@ var grammar = {
 			["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']};"],
 			["createtable", "$$ = $1;"],
 			["insert", "$$ = $1;"],
+			["delete", "$$ = $1;"],
 			["update", "$$ = $1;"]
 		],
 
@@ -105,6 +107,13 @@ var grammar = {
 			["update WHERE c", "$$ = $1; $$.where = $3;"]
 			],
 		"updateset": [["SET IDENTIFIER = e", "$$ = {}; $$[$2] = $4;"], ["updateset , IDENTIFIER = e", "$$ = $1; $$[$3] = $5;"]],
+
+		// delete syntax
+		"delete": [
+			["DELETE FROM IDENTIFIER", "$$ = {type: 'delete', table: $3};"],
+			["DELETE * FROM IDENTIFIER", "$$ = {type: 'delete', table: $4};"],
+			["delete WHERE c", "$$ = $1; $$.where = $3;"]
+		],
 
 		// syntax of select
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
