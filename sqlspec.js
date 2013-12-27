@@ -9,12 +9,17 @@ var grammar = {
 		["'(\\\\'|.)*?'", "return 'STRINGX';"],
 		// reserved words: this is since JS Regex does not support (?i)
 		["[Ss][Ee][Ll][Ee][Cc][Tt]\\b", "return 'SELECT';"],
+		// TODO: UNION
 		["[Aa][Ss]\\b", "return 'AS';"],
 		["[Ss][Hh][Oo][Ww]\\s+[Tt][Aa][Bb][Ll][Ee][Ss]\\b", "return 'SHOWTABLES';"],
 		["[Cc][Rr][Ee][Aa][Tt][Ee]\\b", "return 'CREATE';"],
+		// TODO: drop (table, index)
 		["[Tt][Aa][Bb][Ll][Ee]\\b", "return 'TABLE';"],
+		// TODO: view
+		// TODO: index
 		["[Ii][Ff]\\s+[Nn][Oo][Tt]\\s+[Ee][Xx][Ii][Ss][Tt][Ss]\\b", "return 'IFNOTEXISTS';"],
 		["[Ff][Rr][Oo][Mm]\\b", "return 'FROM';"],
+		// TODO: {inner, left, right, full} join
 		["[Ii][Nn][Ss][Ee][Rr][Tt]\\s+[Ii][Nn][Tt][Oo]\\b", "return 'INSERTINTO';"],
 		["[Vv][Aa][Ll][Uu][Ee][Ss]\\b", "return 'VALUES';"],
 		["[Dd][Ee][Ff][Aa][Uu][Ll][Tt]\\b", "return 'DEFAULT';"],
@@ -24,8 +29,13 @@ var grammar = {
 		["[Uu][Pp][Dd][Aa][Tt][Ee]\\b", "return 'UPDATE';"],
 		["[Ss][Ee][Tt]\\b", "return 'SET';"],
 		["[Ww][Hh][Ee][Rr][Ee]\\b", "return 'WHERE';"],
+		// TODO: GROUP BY
+		// TODO: HAVING
+		// TODO: ORDER BY
 		["[Nn][Oo][Tt]\\b", "return 'NOT';"],
 		["[Aa][Nn][Dd]\\b", "return 'AND';"],
+		// TODO: Between
+		// TODO: like
 		["[Oo][Rr]\\b", "return 'OR';"],
 		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
@@ -97,6 +107,7 @@ var grammar = {
 
 		// syntax of select
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
+		// TODO: from recursive select
 		"select2": [["select1", "$$ = $1;"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
 		"select3": [["select2", "$$ = $1;"], ["select2 WHERE c", "$$ = $1; $$.where = $3;"]],
 		// TODO: GROUP BY
@@ -114,6 +125,7 @@ var grammar = {
 
 		// expressions and conditions
 		"e": [
+			// TODO: recursive select
 			["e + e", "$$ = {op: 'add', a: $1, b: $3};"],
 			["e - e", "$$ = {op: 'sub', a: $1, b: $3};"],
 			["e * e", "$$ = {op: 'mul', a: $1, b: $3};"],
