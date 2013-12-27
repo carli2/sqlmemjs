@@ -62,6 +62,7 @@ Supported Commands
 - INSERT INTO table(col1, col2) VALUES (val11, val12), (val21, val22)
 - UPDATE table SET col1=val1, col2=val2
 - UPDATE table SET col1=val1, col2=val2 WHERE condition
+- DELETE FROM table WHERE condition
 - SELECT \* FROM table
 - SELECT \* FROM table1, table2
 - SELECT table1.\*, table2.col FROM table1, table2
