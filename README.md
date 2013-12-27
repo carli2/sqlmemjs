@@ -69,6 +69,7 @@ Supported Commands
 - SELECT * FROM table WHERE ID=?
 - SELECT 1/2 UNION SELECT 1+2
 - SELECT a+b FROM (SELECT 1 as a, 2 as b)
+- SELECT 1+(SELECT 2+3)
 
 Supported Data Types
 --------------------

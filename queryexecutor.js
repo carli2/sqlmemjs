@@ -83,6 +83,7 @@ function SQLinMemory() {
 		// in order to keep cursor stability
 		this.close = function() {
 			// TODO: unregister observer in table
+			// but also keep in mind that users might restart with reset
 		}
 		this.fetch = function() {
 			if(cursor < table.data.length) {
@@ -286,6 +287,49 @@ function SQLinMemory() {
 					default:
 					throw "Unknown opcode " + code.op;
 				}
+			} else if(code.nest) {
+				// nested SELECT
+				var froms = [];
+				// add the scope of the tuple to the nested select
+				// we do that by adding a FROM clause which returns one tuple
+				function findFrom(q) {
+					if(typeof q === 'object') {
+						if(q.type === 'select') {
+							if(!q.from) q.from = {};
+							var id = '_outer_tuple';
+							while(q.from[id]) id = '_'+id;
+							var f = new singleTuple({}, schema);
+							q.from[id] = f;
+							froms.push(f);
+						}
+						for(var i in q) {
+							// find all from clauses
+							findFrom(q[i]);
+						}
+					}
+				}
+				findFrom(code.nest);
+				// create the iterator (we will reset the iterator for each value)
+				var iterator = self.query(code.nest, args);
+				var schema = iterator.getSchema();
+				if(schema.length !== 1) {
+					throw "Nested select needs exactly 1 column";
+				}
+				return {
+					id: id,
+					type: schema[0][1],
+					fn: function(tuples) {
+						// update tuple information to nested selects
+						for(var i in froms) {
+							froms[i].reset(tuples);
+						}
+						// execute the inner select
+						iterator.reset();
+						var val = iterator.fetch();
+						iterator.close();
+						return val[schema[0][0]];
+					}
+				};
 			}
 			// TODO: functions
 		}
@@ -330,6 +374,31 @@ function SQLinMemory() {
 		}
 		this.getSchema = function() {
 			return [['VALUE', type]];
+		}
+	}
+	/*
+	Single tuple select (1 row, n cols)
+	@param value tuple
+	@param schema schema of the tuple
+	*/
+	function singleTuple(value, schema) {
+		var count = 0;
+		this.reset = function(newval) {
+			count = 0;
+			if(newval) {
+				value = newval;
+			}
+		}
+		this.close = function() {
+		}
+		this.fetch = function() {
+			if(count == 0) {
+				count++;
+				return value;
+			}
+		}
+		this.getSchema = function() {
+			return schema;
 		}
 	}
 	/*
@@ -504,6 +573,9 @@ function SQLinMemory() {
 				walkThrough(query.a);
 				walkThrough(query.b);
 			}
+			if(query.nest) {
+				walkThrough(query.nest);
+			}
 			if(query.type === 'select') {
 				for(var i in query.expr) {
 					walkThrough(query.expr[i][1]);
@@ -561,7 +633,13 @@ function SQLinMemory() {
 						}
 					} else {
 						// nested select
-						iterator = self.query(tables[t]);
+						if(tables[t].fetch) {
+							// raw iterator passed via from
+							iterator = tables[t];
+						} else {
+							// SELECT statement
+							iterator = self.query(tables[t]);
+						}
 					}
 					iterator = new renameSchema(iterator, t);
 					tables[t] = iterator;

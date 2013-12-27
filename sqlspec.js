@@ -125,7 +125,6 @@ var grammar = {
 
 		// expressions and conditions
 		"e": [
-			// TODO: recursive select (tuplescope)
 			["e + e", "$$ = {op: 'add', a: $1, b: $3};"],
 			["e - e", "$$ = {op: 'sub', a: $1, b: $3};"],
 			["e * e", "$$ = {op: 'mul', a: $1, b: $3};"],
@@ -136,6 +135,7 @@ var grammar = {
 			["STRING", "$$ = $1;"],
 			["IDENTIFIER", "$$ = {id: $1};"],
 			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"],
+			["( select )", "$$ = {nest: $2};"],
 			["?", "$$ = {wildcard: true};"]
 		],
 		"c": [
