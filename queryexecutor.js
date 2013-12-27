@@ -210,7 +210,10 @@ function SQLinMemory() {
 		if(typeof code == 'object') {
 			if(code.wildcard) {
 				// ? element (pop one argument)
-				var value = args.pop();
+				if(code.wildcard === true) {
+					throw "unrecognized ? - this is a bug, please report";
+				}
+				var value = args[code.wildcard];
 				return {
 					id: id,
 					type: (typeof value === 'number') ? 'NUMBER' : 'TEXT',
@@ -485,19 +488,63 @@ function SQLinMemory() {
 	/*
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
 	*/
-	this.prepare = function(sql) {
-		return parser.parse(sql);
+	this.prepare = function(sql, scope) {
+		scope = scope || {index: 1};
+		// parse the query
+		var query = parser.parse(sql);
+		// enumerate all ?'s
+		function walkThrough(query) {
+			if(typeof query !== 'object') return;
+			if(query.wildcard === true) {
+				// give index to ?
+				query.wildcard = scope.index++;
+				return;
+			}
+			if(query.op || query.cmp || query.type === 'union') {
+				walkThrough(query.a);
+				walkThrough(query.b);
+			}
+			if(query.type === 'select') {
+				for(var i in query.expr) {
+					walkThrough(query.expr[i][1]);
+				}
+				walkThrough(query.from);
+				walkThrough(query.where);
+			}
+			if(query.type === 'insert') {
+				for(var i = 0; i < query.rows.length; i++) {
+					for(var j = 0; j < query.rows[i].length; j++) {
+						walkThrough(query.rows[i][j]);
+					}
+				}
+			}
+			if(query.type === 'update') {
+				for(var i in query.set) {
+					walkThrough(query.set[i]);
+				}
+				walkThrough(query.where);
+			}
+		}
+		walkThrough(query);
+		return query;
 	}
 	/*
 	Main query method
 	*/
-	this.query = function(sql) {
-		var args = []; // wildcard arguments
-		for(var i = arguments.length-1; i > 0; i--) {
-			args.push(arguments[i]);
+	this.query = function(sql, schema) {
+		var args;
+		if(typeof schema === 'object' && schema.index) {
+			// known scope
+			args = schema;
+		} else {
+			// create new scope from function arguments
+			args = {index: 1, length: arguments.length};
+			for(var i = 1; i < arguments.length; i++) {
+				args[i] = arguments[i];
+			}
 		}
 		// parse the query
-		var query = (typeof sql === 'string') ? this.prepare(sql) : sql;
+		var query = (typeof sql === 'string') ? this.prepare(sql, args) : sql;
 		console.log(sql + ' => ' + JSON.stringify(query));
 		// process queries
 		if(query.type == 'select') return (function(){
@@ -551,13 +598,13 @@ function SQLinMemory() {
 				}
 			}
 			var newtuple = {}, schema = [];
-			// compile calculations first (wildcard order)
+			// compile calculations
 			for(var i in cols) {
 				var f = createFunction(cols[i][0], cols[i][1], from.getSchema(), args);
 				newtuple[f.id] = f.fn;
 				schema.push([f.id, f.type]);
 			}
-			// WHERE-Filter (and find index checks) (wildcard order)
+			// WHERE-Filter (and find index checks)
 			if(query.where) {
 				from = new Filter(from, createCondition(from, query.where, from.getSchema(), args));
 			}
