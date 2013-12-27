@@ -21,6 +21,6 @@ printTable(db.query("INSERT INTO person(Name, AGE) VALUES (?, ?)", 'Paul', 55));
 var hanna = db.query("INSERT INTO person(Name) VALUES ('Hanna')").insert_id;
 var getPerson = db.prepare("SELECT * FROM `person` WHERE ID=?");
 printTable(db.query(getPerson, hanna));
-//printTable(db.query("UPDATE person SET Name='Eva' WHERE id=?", hanna));
+printTable(db.query("UPDATE person SET Name='Eva', Age = Age+1 WHERE id=?", hanna));
 printTable(db.query("SELECT * FROM `person`"));
 printTable(db.query("SELECT *, ? FROM `person` WHERE age > ?", 12, 30));

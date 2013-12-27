@@ -21,6 +21,8 @@ var grammar = {
 		["[Pp][Rr][Ii][Mm][Aa][Rr][Yy]\\s+[Kk][Ee][Yy]\\b", "return 'PRIMARYKEY';"],
 		["[Aa][Uu][Tt][Oo]_[Ii][Nn][Cc][Rr][Ee][Mm][Ee][Nn][Tt]\\b", "return 'AUTO_INCREMENT';"],
 		["[Cc][Oo][Mm][Mm][Ee][Nn][Tt]\\b", "return 'COMMENT';"],
+		["[Uu][Pp][Dd][Aa][Tt][Ee]\\b", "return 'UPDATE';"],
+		["[Ss][Ee][Tt]\\b", "return 'SET';"],
 		["[Ww][Hh][Ee][Rr][Ee]\\b", "return 'WHERE';"],
 		["[Nn][Oo][Tt]\\b", "return 'NOT';"],
 		["[Aa][Nn][Dd]\\b", "return 'AND';"],
@@ -64,7 +66,8 @@ var grammar = {
 			["select", "$$ = $1;"],
 			["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']};"],
 			["createtable", "$$ = $1;"],
-			["insert", "$$ = $1;"]
+			["insert", "$$ = $1;"],
+			["update", "$$ = $1;"]
 		],
 
 		// table creation syntax
@@ -84,6 +87,13 @@ var grammar = {
 		"insertrows": [["insertrow", "$$ = [$1];"], ["insertrows , insertrow", "$$ = $1; $$.push($3);"]],
 		"insertrow": [["( valuelist )", "$$ = $2;"]],
 		"valuelist": [["e", "$$ = [$1];"], ["valuelist , e", "$$ = $1; $$.push($3);"]],
+
+		// update syntax
+		"update": [
+			["UPDATE IDENTIFIER updateset", "$$ = {type: 'update', table: $2, set: $3};"],
+			["update WHERE c", "$$ = $1; $$.where = $3;"]
+			],
+		"updateset": [["SET IDENTIFIER = e", "$$ = {}; $$[$2] = $4;"], ["updateset , IDENTIFIER = e", "$$ = $1; $$[$3] = $5;"]],
 
 		// syntax of select
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],

@@ -580,6 +580,7 @@ function SQLinMemory() {
 				tables[query.id] = table;
 			}
 			return new singleValue(query.id, 'STRING');
+			// TODO: ALTER
 		})(); else if(query.type == 'insert') return (function(){
 			// INSERT ...
 			var tablename = convertStringForAttribute(query.table, tables);
@@ -643,7 +644,48 @@ function SQLinMemory() {
 				result = new singleValue(0, 'INTEGER');
 			}
 			return result;
+		})(); else if(query.type == 'update') return (function(){
+			// UPDATE
+			var tablename = convertStringForAttribute(query.table, tables);
+			if(!tablename) {
+				throw "Table " + query.table + " does not exist";
+			}
+			var table = tables[tablename];
+			var iterator = new tableIterator(table);
+			var newset = {};
+			for(var i in query.set) {
+				var colname = convertStringForAttribute(i, table.cols);
+				if(!colname) {
+					throw "Table " + tablename + " does not have a column called " + i;
+				}
+				var code = createFunction(colname, query.set[i], iterator.getSchema(), args);
+				if(code.type != table.cols[colname].type) {
+					throw "Column " + colname + " has incompatible type";
+				}
+				newset[colname] = code.fn;
+			}
+			if(query.where) {
+				// Filter tuples by WHERE-Condition
+				iterator = new Filter(iterator, createCondition(iterator, query.where, iterator.getSchema(), args));
+			}
+			var tuple, count = 0;
+			// now update all tuples
+			while(tuple = iterator.fetch()) {
+				var newfields = {};
+				for(var i in newset) {
+					newfields[i] = newset[i](tuple);
+				}
+				for(var i in newfields) {
+					// TODO: update index
+					tuple[i] = newfields[i];
+				}
+				count++;
+			}
+			var result = new singleValue(count, 'NUMBER');
+			result.num_rows = count;
+			return result;
 		})();
+		// TODO: DELETE
 		throw "unknown command: " + JSON.stringify(query);
 	}
 }
