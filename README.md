@@ -3,6 +3,13 @@ SQL inMemory.js
 
 SQL inMemory.js is a full SQL engine written in JavaScript.
 
+You can test it live on http://launix.de/sqlmemjs/
+
+Download:
+
+- http://launix.de/sqlmemjs/sqlinmem.js
+- http://launix.de/sqlmemjs/sqlinmem.min.js
+
 Funding it
 ----------
 
