@@ -95,9 +95,9 @@ var grammar = {
 		// TODO: LIMIT
 		"select": [["select3", "$$ = $1;"]],
 
-		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = [yytext, $1];"],
+		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = ['', $1];"],
 			["*", "$$ = '';"], ["IDENTIFIER . *", "$$ = $1;"]],
-		"cols": [["col", "$$ = [$1];"], ["cols , col", "$$ = $1; $$.push($3);"]],
+		"cols": [["col", "if($1[0] === '') $1[0] = 'col0'; $$ = [$1];"], ["cols , col", "$$ = $1; if($3[0] === '') $3[0] = 'col'+$$.length; $$.push($3);"]],
 
 		"table": [["IDENTIFIER AS IDENTIFIER", "$$ = {}; $$[$3] = $1;"], ["IDENTIFIER", "$$ = {}; $$[$1] = $1;"]],
 		"tables": [["table", "$$ = $1;"], ["tables , IDENTIFIER AS IDENTIFIER", "$$ = $1; $$[$5] = $3;"], ["tables , IDENTIFIER", "$$ = $1; $$[$3] = $3;"]],

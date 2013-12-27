@@ -361,7 +361,10 @@ function SQLinMemory() {
 		}
 	}
 	/*
-	Map: remap tuple values
+	Map: convert a tuple with a function
+	@param table table to iterate over
+	@param schema resulting schema
+	@param fn function that converts input tuple into output tuple
 	*/
 	function Map(table, schema, fn) {
 		this.reset = function() {
@@ -380,6 +383,8 @@ function SQLinMemory() {
 	}
 	/*
 	Filter: only pass accepting tuples
+	@param table table to filter
+	@param fn function that should return wether a tuple is accepted
 	*/
 	function Filter(table, fn) {
 		this.reset = function() {
@@ -407,6 +412,12 @@ function SQLinMemory() {
 		}
 	}
 	/*
+	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
+	*/
+	this.prepare = function(sql) {
+		return parser.parse(sql);
+	}
+	/*
 	Main query method
 	*/
 	this.query = function(sql) {
@@ -415,7 +426,7 @@ function SQLinMemory() {
 			args.push(arguments[i]);
 		}
 		// parse the query
-		var query = parser.parse(sql);
+		var query = (typeof sql === 'string') ? this.prepare(sql) : sql;
 		console.log(sql + ' => ' + JSON.stringify(query));
 		// process queries
 		if(query.type == 'select') return (function(){
