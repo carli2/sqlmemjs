@@ -1,4 +1,8 @@
-all: sqlinmem.js sqlinmem.min.js
+all: dist
+
+dist: sqlinmem.js sqlinmem.min.js
+	cat license.txt sqlinmem.js > dist/sqlinmem.js
+	cat license.txt sqlinmem.min.js > dist/sqlinmem.min.js
 
 sqlinmem.js: sqlparser.js queryexecutor.js
 	cat sqlparser.js queryexecutor.js |sed "s|var parser = require('./sqlparser').parser;||" > sqlinmem.js
