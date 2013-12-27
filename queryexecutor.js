@@ -240,12 +240,49 @@ function SQLinMemory() {
 						}
 					}
 					break;
+					case 'sub':
+					return {
+						id: id,
+						type: "NUMBER",
+						fn: function(tuples) {
+							return a(tuples) - b(tuples);
+						}
+					}
+					break;
+					case 'mul':
+					return {
+						id: id,
+						type: "NUMBER",
+						fn: function(tuples) {
+							return a(tuples) * b(tuples);
+						}
+					}
+					break;
+					case 'div':
+					return {
+						id: id,
+						type: "NUMBER",
+						fn: function(tuples) {
+							return a(tuples) / b(tuples);
+						}
+					}
+					break;
+					case 'neg':
+					return {
+						id: id,
+						type: "NUMBER",
+						fn: function(tuples) {
+							return -a(tuples);
+						}
+					}
+					break;
 					// TODO: other arithmetic operations
 
 					default:
 					throw "Unknown opcode " + code.op;
 				}
 			}
+			// TODO: functions
 		}
 		if(typeof code == 'number') {
 			return {
