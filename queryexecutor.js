@@ -13,6 +13,7 @@ A storage backend has to implement that interface. Also all relational operation
 
 */
 
+
 function SQLinMemory() {
 	var self = this;
 
@@ -38,6 +39,25 @@ function SQLinMemory() {
 	*/
 	var tables = {};
 
+	/*
+	Template for all cursors
+	*/
+	function Cursor() {
+		this.reset =
+		this.fetch =
+		this.close =
+		function() {};
+		this.getSchema = function() {return [];}
+		
+		this.toArray = function() {
+			var result = [];
+			var tuple;
+			while(tuple = this.fetch()) {
+				result.push(tuple);
+			}
+			return result;
+		}
+	}
 	/*
 	Iterator that iterates over all tables (SHOW TABLES)
 	*/
@@ -70,6 +90,7 @@ function SQLinMemory() {
 			return [['IDENTIFIER', 'TEXT']];
 		}
 	}
+	tablesIterator.prototype = new Cursor();
 	/*
 	Iterator that iterates over all tuples of one table
 	*/
@@ -127,6 +148,7 @@ function SQLinMemory() {
 			return schema;
 		}
 	}
+	tableIterator.prototype = new Cursor();
 	/*
 	Find element of object and return attribute name with correct case
 	*/
@@ -401,6 +423,7 @@ function SQLinMemory() {
 			return [['VALUE', type]];
 		}
 	}
+	singleValue.prototype = new Cursor();
 	/*
 	Single tuple select (1 row, n cols)
 	@param value tuple
@@ -426,6 +449,7 @@ function SQLinMemory() {
 			return schema;
 		}
 	}
+	singleTuple.prototype = new Cursor();
 	/*
 	Traditional cross join
 	*/
@@ -471,6 +495,7 @@ function SQLinMemory() {
 			return tuple;
 		}
 	}
+	crossJoin.prototype = new Cursor();
 	/*
 	Union of two iterators
 	*/
@@ -503,6 +528,7 @@ function SQLinMemory() {
 			return a.fetch() || b.fetch();
 		}
 	}
+	Union.prototype = new Cursor();
 	// add name to a tables identifiers
 	function renameSchema(table, prefix) {
 		var t = table, p = prefix;
@@ -528,6 +554,7 @@ function SQLinMemory() {
 			return tuple;
 		}
 	}
+	renameSchema.prototype = new Cursor();
 	/*
 	Map: convert a tuple with a function
 	@param table table to iterate over
@@ -549,6 +576,7 @@ function SQLinMemory() {
 			if(tuple) return fn(tuple);
 		}
 	}
+	Map.prototype = new Cursor();
 	/*
 	Filter: only pass accepting tuples
 	@param table table to filter
@@ -579,6 +607,7 @@ function SQLinMemory() {
 			}
 		}
 	}
+	Filter.prototype = new Cursor();
 	/*
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
 	*/
