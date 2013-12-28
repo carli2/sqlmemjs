@@ -8,6 +8,7 @@
   </head>
   <body>
    <h1>SQL inMemory.js</h1>
+   <div style='float: right; width: 30%;' id='json'></div>
    <div id='queries'></div>
    <h2>Execute your own queries</h2>
    <input type='text' id='query' value='select 1+2' onkeydown=''><button id='querybtn'>Execute</button>
@@ -49,6 +50,7 @@
 		    result = '<pre>'+htmlentities(result).replace('\n', '<br/>')+'</pre>';
 	    }
 	    d.innerHTML = '<h2>'+htmlentities(sql)+'</h2>' + (result);
+	    document.getElementById('json').innerText = JSON.stringify(db.exportJSON());
     }
     evaluate("SELECT 1+2 AS sum");
     evaluate("SELECT * FROM tables");

@@ -54,6 +54,18 @@ console.log(JSON.stringify(carl.fetch()));
 carl.close();
 ```
 
+The API allows the following operations:
+
+- var db = new SQLinMemory(); - creates the database
+- db.prepare(sql) - compiles the sql string into a easier to process representation
+- var table = db.query(sql\_or\_prepared, param1, param2) - executes the query and returns a table iterator
+- table.getSchema() - returns an array of all collumns where a column has the form ['IDENTIFIER', 'TYPE']
+- table.fetch() - returns the next tuple or undefined when the table end is reached
+- table.reset() - start reading again (you can do that at any point of time)
+- table.close() - release all cursors (do not fetch after close; but you can reset)
+- db.exportJSON() - returns a compressed JSON object of all data stored
+- db.importJSON(json) - imports the previously exported tables and overrides existing tables
+
 Supported Commands
 ------------------
 

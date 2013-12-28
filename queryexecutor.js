@@ -932,6 +932,33 @@ function SQLinMemory() {
 		})();
 		throw "unknown command: " + JSON.stringify(query);
 	}
+	this.exportJSON = function() {
+		var result = {};
+		for(var t in tables) {
+			var table = {};
+			result[t] = table;
+			table.schema = tables[t].schema;
+			table.data = tables[t].data;
+		}
+		return result;
+	}
+	this.importJSON = function(json) {
+		for(var t in json) {
+			var table = {};
+			tables[t] = table;
+			table.id = t;
+			table.schema = json[t].schema;
+			table.cols = {};
+			for(var i = 0; i < table.schema.length; i++) {
+				table.cols[table.schema[i].id] = table.schema[i];
+				if(table.schema[i].primary) {
+					table.primary = table.schema[i].id;
+				}
+			}
+			table.data = json[t].data;
+			table.cursors = [];
+		}
+	}
 }
 
 function printTable(table, print) {
