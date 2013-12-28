@@ -297,8 +297,8 @@ function SQLinMemory() {
 	*/
 	function createCondition(id, code, schema, args) {
 		if(code.op) {
-			var a = code.a ? createCondition('', code.a, schema, args) : undefined;
-			var b = code.b ? createCondition('', code.b, schema, args) : undefined;
+			var a = code.a !== undefined ? createCondition('', code.a, schema, args) : undefined;
+			var b = code.b !== undefined ? createCondition('', code.b, schema, args) : undefined;
 			switch(code.op) {
 				case 'and':
 				return function(tuples) {
@@ -321,8 +321,9 @@ function SQLinMemory() {
 			}
 		}
 		if(code.cmp) {
-			var a = code.a ? createFunction('', code.a, schema, args).fn : undefined;
-			var b = code.b ? createFunction('', code.b, schema, args).fn : undefined;
+			var a = code.a !== undefined ? createFunction('', code.a, schema, args).fn : undefined;
+			var b = code.b !== undefined ? createFunction('', code.b, schema, args).fn : undefined;
+			var c = code.c !== undefined ? createFunction('', code.c, schema, args).fn : undefined;
 			switch(code.cmp) {
 				case '=':
 				return function(tuples) {
@@ -352,6 +353,12 @@ function SQLinMemory() {
 				case '>=':
 				return function(tuples) {
 						return a(tuples) >= b(tuples);
+					}
+				break;
+				case 'between':
+				return function(tuples) {
+						var v = a(tuples);
+						return v >= b(tuples) && v <= c(tuples);
 					}
 				break;
 
@@ -397,8 +404,8 @@ function SQLinMemory() {
 				}
 				throw "Unknown identifier: " + code.id;
 			} else if(code.op) {
-				var a = code.a ? createFunction('', code.a, schema, args).fn : undefined;
-				var b = code.b ? createFunction('', code.b, schema, args).fn : undefined;
+				var a = code.a !== undefined ? createFunction('', code.a, schema, args).fn : undefined;
+				var b = code.b !== undefined ? createFunction('', code.b, schema, args).fn : undefined;
 				switch(code.op) {
 					case 'add':
 					return {
@@ -768,6 +775,7 @@ function SQLinMemory() {
 			if(query.op || query.cmp || query.type === 'union') {
 				walkThrough(query.a);
 				walkThrough(query.b);
+				walkThrough(query.c);
 			}
 			if(query.call && query.args) {
 				for(var i = 0; i < query.args.length; i++) {

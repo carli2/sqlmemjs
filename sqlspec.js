@@ -38,7 +38,7 @@ var grammar = {
 		["[Nn][Oo][Tt]\\b", "return 'NOT';"],
 		["[Aa][Nn][Dd]\\b", "return 'AND';"],
 		["[Oo][Rr]\\b", "return 'OR';"],
-		// TODO: Between
+		["[Bb][Ee][Tt][Ww][Ee][Ee][Nn]\\b", "return 'BETWEEN';"],
 		// TODO: like
 		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
@@ -67,7 +67,7 @@ var grammar = {
 		["left", "AND"],
 		["left", "OR"],
 		["left", "NOT"],
-		["left", "=", "<>", "<", "<=", ">", ">="],
+		["left", "=", "<>", "<", "<=", ">", ">=", "BETWEEN"],
 		["left", "+", "-"],
 		["left", "*", "/"],
 		["left", "^"],
@@ -167,6 +167,7 @@ var grammar = {
 			["e <= e", "$$ = {cmp: '<=', a: $1, b: $3};"],
 			["e > e", "$$ = {cmp: '>', a: $1, b: $3};"],
 			["e >= e", "$$ = {cmp: '>=', a: $1, b: $3};"],
+			["e BETWEEN e AND e", "$$ = {cmp: 'between', a: $1, b: $3, c: $5};"],
 			["c AND c", "$$ = {op: 'and', a: $1, b: $3};"],
 			["c OR c", "$$ = {op: 'or', a: $1, b: $3};"],
 			["NOT c", "$$ = {op: 'not', a: $2};"]

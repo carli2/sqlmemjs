@@ -10,6 +10,7 @@ db.query('SELECT -1*3 as a, 3/4 as b').assert([{a: -1*3, b: 3/4}]);
 db.query('SELECT a+b FROM (SELECT -1*3 as a, 3/4 as b)').assert([{col0: -1*3+3/4}]);
 db.query("SELECT 1+(select 2+3)").assert([{col0: 6}]);
 db.query('SELECT sqrt(?)', 9).assert([{col0: 3}]);
+db.query('select 1+2 where 0 between 1 and 3').assert([]);
 db.query("SELECT 'Monikas Imbiss' UNION SELECT 'abc123'").assert([{col0: 'Monikas Imbiss'}, {col0: 'abc123'}]);
 db.query("SELECT 'Monika\\'s Imbiss'").assert([{col0: 'Monika\'s Imbiss'}]);
 db.query("CREATE TABLE IF NOT EXISTS person(ID integer PRIMARY KEY AUTO_INCREMENT, Name string COMMENT 'Name of the Person', Age NUMBER DEFAULT 18)").assert([{VALUE: 'person'}]);
