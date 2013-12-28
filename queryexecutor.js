@@ -40,6 +40,77 @@ function SQLinMemory() {
 	var tables = {};
 
 	/*
+	A Table consists of a schema, data and indices
+	*/
+	function Table(id, schema) {
+		tables[id] = this;
+		this.id = id;
+		this.schema = schema;
+		this.primary = undefined;
+		this.cols = {};
+		// create table: verify col types
+		for(var i in schema) {
+			var typ = validateDatatype(schema[i].type);
+			if(!typ) {
+				throw "unknown data type: " + schema[i].type;
+			}
+			this.schema[i].type = typ;
+			if(schema[i].primary) {
+				if(this.primary) {
+					throw "Two columns are marked primary: " + primary + " and " + schema[i].id;
+				}
+				this.primary = schema[i].id;
+			}
+			this.cols[schema[i].id] = schema[i];
+		}
+		this.data = [];
+		this.cursors = [];
+
+
+		/*
+		INSERT a tuple into the table
+		*/
+		this.insertTuple = function(tuple) {
+			var last_insert;
+			// fill default values and auto_increment
+			for(var j in this.schema) {
+				var col = this.schema[j];
+				if(!tuple[col.id]) {
+					// col default
+					if(col.auto_increment) {
+						// AUTO_INCREMENT
+						tuple[col.id] = col.auto_increment;
+						col.auto_increment++;
+					} else if(col.default) {
+						// DEFAULT-Value
+						tuple[col.id] = col.default;
+					} else {
+						// zero value
+						if(col.type === 'TEXT') {
+							tuple[col.id] = '';
+						} else if(col.type === 'NUMBER') {
+							tuple[col.id] = 0;
+						}
+					}
+				}
+				if(col.primary) {
+					// update insert_id
+					last_insert = tuple[col.id];
+				}
+			}
+			this.data.push(tuple);
+			// update all cursors to accept new item
+			for(var j = 0; j < this.cursors.length; j++) {
+				this.cursors[j].insert(this.data.length-1);
+			}
+			// TODO: update indices
+			return last_insert;
+		}
+
+		// TODO: also move update and delete here in order to maintain transactions
+	}
+
+	/*
 	Template for all cursors
 	*/
 	function Cursor() {
@@ -802,35 +873,18 @@ function SQLinMemory() {
 					throw "Table " + query.id + " already exists";
 				}
 			} else {
-				var primary = undefined;
-				var cols = {};
-				// create table: verify col types
-				for(var i in query.cols) {
-					var typ = validateDatatype(query.cols[i].type);
-					if(!typ) {
-						throw "unknown data type: " + query.cols[i].type;
-					}
-					query.cols[i].type = typ;
+				for(var i = 0; i < query.cols.length; i++) {
 					if(query.cols[i].default) {
 						// DEFAULT-Value: evaluate and check
 						var code = createFunction('default', query.cols[i].default, [], args);
-						if(validateDatatype(code.type) != typ) {
+						if(validateDatatype(code.type) != validateDatatype(query.cols[i].type)) {
 							throw "incompatible data type for default value";
 						}
 						query.cols[i].default = code.fn({});
 					}
-					if(query.cols[i].primary) {
-						if(primary) {
-							throw "Two columns are marked primary: " + primary + " and " + query.cols[i].id;
-						}
-						primary = query.cols[i].id;
-					}
-					cols[query.cols[i].id] = query.cols[i];
 				}
-				// create data structure for table
-				// TODO: move this functionality to Table
-				table = {id: query.id, schema: query.cols, cols: cols, data: [], primary: primary, cursors: []};
-				tables[query.id] = table;
+				// create the table
+				table = new Table(query.id, query.cols);
 			}
 			return new singleValue(query.id, 'STRING');
 			// TODO: ALTER
@@ -862,40 +916,6 @@ function SQLinMemory() {
 				}
 			}
 			var last_insert = 0;
-			//TODO: move this functionality to Table
-			function insertTuple(tuple) {
-				// fill default values and auto_increment
-				for(var j in table.schema) {
-					var col = table.schema[j];
-					if(!tuple[col.id]) {
-						// col default
-						if(col.auto_increment) {
-							// AUTO_INCREMENT
-							tuple[col.id] = col.auto_increment;
-							col.auto_increment++;
-						} else if(col.default) {
-							// DEFAULT-Value
-							tuple[col.id] = col.default;
-						} else {
-							// zero value
-							if(col.type === 'TEXT') {
-								tuple[col.id] = '';
-							} else if(col.type === 'NUMBER') {
-								tuple[col.id] = 0;
-							}
-						}
-					}
-					if(col.primary) {
-						// update insert_id
-						last_insert = tuple[col.id];
-					}
-				}
-				table.data.push(tuple);
-				// update all cursors to accept new item
-				for(var j = 0; j < table.cursors.length; j++) {
-					table.cursors[j].insert(table.data.length-1);
-				}
-			}
 			if(query.rows) {
 				for(var i in query.rows) {
 					var row = query.rows[i];
@@ -908,7 +928,7 @@ function SQLinMemory() {
 						var code = createFunction(cols[j], row[j], [], args);
 						tuple[code.id] = code.fn({}); // fill the tuples
 					}
-					insertTuple(tuple);
+					last_insert = table.insertTuple(tuple);
 				}
 			} else if(query.select) {
 				var rows = self.query(query.select, args);
@@ -922,12 +942,11 @@ function SQLinMemory() {
 					for(var j = 0; j < schema.length; j++) {
 						tuple[cols[j]] = ituple[schema[j][0]];
 					}
-					insertTuple(tuple);
+					last_insert = table.insertTuple(tuple);
 				}
 			} else {
 				throw "unknown insert - this should not happen";
 			}
-			// TODO: update indexes
 			var result;
 			if(table.primary) {
 				result = new singleValue(last_insert, table.cols[table.primary].type)
@@ -1020,19 +1039,8 @@ function SQLinMemory() {
 	}
 	this.importJSON = function(json) {
 		for(var t in json) {
-			var table = {};
-			tables[t] = table;
-			table.id = t;
-			table.schema = json[t].schema;
-			table.cols = {};
-			for(var i = 0; i < table.schema.length; i++) {
-				table.cols[table.schema[i].id] = table.schema[i];
-				if(table.schema[i].primary) {
-					table.primary = table.schema[i].id;
-				}
-			}
+			var table = new Table(t, json[t].schema);
 			table.data = json[t].data;
-			table.cursors = [];
 		}
 	}
 }
