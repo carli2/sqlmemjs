@@ -13,11 +13,12 @@ var grammar = {
 		["[Aa][Ss]\\b", "return 'AS';"],
 		["[Ss][Hh][Oo][Ww]\\s+[Tt][Aa][Bb][Ll][Ee][Ss]\\b", "return 'SHOWTABLES';"],
 		["[Cc][Rr][Ee][Aa][Tt][Ee]\\b", "return 'CREATE';"],
-		// TODO: drop (table, index)
+		["[Dd][Rr][Oo][Pp]\\b", "return 'DROP';"],
 		["[Tt][Aa][Bb][Ll][Ee]\\b", "return 'TABLE';"],
 		// TODO: view
 		// TODO: index
 		["[Ii][Ff]\\s+[Nn][Oo][Tt]\\s+[Ee][Xx][Ii][Ss][Tt][Ss]\\b", "return 'IFNOTEXISTS';"],
+		["[Ii][Ff]\\s+[Ee][Xx][Ii][Ss][Tt][Ss]\\b", "return 'IFEXISTS';"],
 		["[Ff][Rr][Oo][Mm]\\b", "return 'FROM';"],
 		// TODO: {inner, left, right, full} join
 		["[Ii][Nn][Ss][Ee][Rr][Tt]\\s+[Ii][Nn][Tt][Oo]\\b", "return 'INSERTINTO';"],
@@ -78,6 +79,7 @@ var grammar = {
 			["select", "$$ = $1;"],
 			["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']};"],
 			["createtable", "$$ = $1;"],
+			["droptable", "$$ = $1;"],
 			["insert", "$$ = $1;"],
 			["delete", "$$ = $1;"],
 			["update", "$$ = $1;"]
@@ -93,6 +95,7 @@ var grammar = {
 				["tabrowdef AUTO_INCREMENT", "$$ = $1; $$.auto_increment = 1;"],
 				["tabrowdef COMMENT STRING", "$$ = $1; $$.comment = $3;"]
 		],
+		"droptable": [["DROP TABLE IDENTIFIER", "$$ = {type: 'droptable', id: $3};"], ["DROP TABLE IFEXISTS IDENTIFIER", "$$ = {type: 'droptable', id: $4, noerror: true};"]],
 
 		// insert syntax
 		"insert": [["INSERTINTO IDENTIFIER ( idlist ) VALUES insertrows", "$$ = {type: 'insert', table: $2, cols: $4, rows: $7};"]],

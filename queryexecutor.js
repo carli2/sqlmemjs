@@ -780,6 +780,19 @@ function SQLinMemory() {
 			}
 			return new singleValue(query.id, 'STRING');
 			// TODO: ALTER
+		})(); else if(query.type == 'droptable') return (function(){
+			// DROP TABLE
+			var tablename = convertStringForAttribute(query.id, tables);
+			if(!tablename) {
+				if(query.noerror) {
+					return new singleValue(0, 'NUMBER');
+				}
+				throw "Table " + query.id + " does not exist";
+			}
+			// just drop the reference; GC will do the rest
+			delete tables[tablename];
+			// TODO: foreign keys
+			return new singleValue(1, 'NUMBER');
 		})(); else if(query.type == 'insert') return (function(){
 			// INSERT ...
 			var tablename = convertStringForAttribute(query.table, tables);
