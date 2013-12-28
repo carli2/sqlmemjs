@@ -148,6 +148,30 @@ function SQLinMemory() {
 			}
 			print('');
 		}
+
+		this.assert = function(target) {
+			var source = this.toArray();
+			function print() {
+				console.log("assertion fail!");
+				console.log('IS:     ' + JSON.stringify(source));
+				console.log('SHOULD: ' + JSON.stringify(target));
+			}
+			if(source.length != target.length) {
+				print();
+				return false;
+			}
+			for(var i = 0; i < source.length; i++) {
+				for(var t in source[i]) {
+					if(source[i][t] !== target[i][t]) {
+						print();
+						return false;
+					}
+				}
+			}
+			this.reset();
+			this.printTable();
+			return true;
+		}
 	}
 	/*
 	Iterator that iterates over all tables (SHOW TABLES)
