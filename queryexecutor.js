@@ -57,6 +57,26 @@ function SQLinMemory() {
 			}
 			return result;
 		}
+
+		this.printTable = function(print) {
+			print = print || console.log;
+			var schema = this.getSchema();
+			var line = '';
+			for(var i in schema) {
+				line += schema[i][0] + '; ';
+			}
+			print(line);
+			print(line.replace(/./g, '-'));
+			var tuple;
+			while(tuple = this.fetch()) {
+				line = '';
+				for(var i in schema) {
+					line += tuple[schema[i][0]] + '; ';
+				}
+				print(line);
+			}
+			print('');
+		}
 	}
 	/*
 	Iterator that iterates over all tables (SHOW TABLES)
@@ -990,27 +1010,6 @@ function SQLinMemory() {
 	}
 }
 
-function printTable(table, print) {
-	print = print || console.log;
-	var schema = table.getSchema();
-	var line = '';
-	for(var i in schema) {
-		line += schema[i][0] + '; ';
-	}
-	print(line);
-	print(line.replace(/./g, '-'));
-	var tuple;
-	while(tuple = table.fetch()) {
-		line = '';
-		for(var i in schema) {
-			line += tuple[schema[i][0]] + '; ';
-		}
-		print(line);
-	}
-	print('');
-}
-
 if(typeof exports) {
 	exports.SQLinMemory = SQLinMemory;
-	exports.printTable = printTable;
 }

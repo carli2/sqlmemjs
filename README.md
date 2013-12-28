@@ -64,6 +64,7 @@ The API allows the following operations:
 - <tt>table.reset()</tt> - start reading again (you can do that at any point of time)
 - <tt>table.close()</tt> - release all cursors (do not fetch after close; but you can reset; close is necessary when not fetching all data and unnecessary when fetch() once returned undefined)
 - <tt>table.toArray()</tt> - fetches all tuples and returns them as a JavaScript Array
+- <tt>table.printTable(printLine)</tt> - prints the table in human readable form (leave printLine blank to use console.log)
 - <tt>db.exportJSON()</tt> - returns a compressed JSON object of all data stored
 - <tt>db.importJSON(json)</tt> - imports the previously exported tables and overrides existing tables
 
