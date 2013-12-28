@@ -469,8 +469,34 @@ function SQLinMemory() {
 						return val[schema[0][0]];
 					}
 				};
+			} else if(code.call) {
+				// functions
+				var f = code.call.toUpperCase();
+				function assertLength(n) {
+					// TODO: also assert types
+					if(code.args.length != n) {
+						throw f + " expects " + n + " arguments";
+					}
+				}
+				for(var i = 0; i < code.args.length; i++) {
+					code.args[i] = createFunction('', code.args[i], schema, args);
+				}
+				switch(f) {
+					case 'SQRT':
+						assertLength(1);
+						return {
+							id: id,
+							type: 'NUMBER',
+							fn: function(tuples) {
+								return Math.sqrt(code.args[0].fn(tuples));
+							}
+						};
+					break;
+					// TODO: more functions
+					default:
+					throw "unknown function " + f;
+				}
 			}
-			// TODO: functions
 		}
 		if(typeof code == 'number') {
 			return {
@@ -718,6 +744,11 @@ function SQLinMemory() {
 			if(query.op || query.cmp || query.type === 'union') {
 				walkThrough(query.a);
 				walkThrough(query.b);
+			}
+			if(query.call && query.args) {
+				for(var i = 0; i < query.args.length; i++) {
+					walkThrough(query.args[i]);
+				}
 			}
 			if(query.nest) {
 				walkThrough(query.nest);

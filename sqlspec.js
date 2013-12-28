@@ -34,11 +34,12 @@ var grammar = {
 		// TODO: GROUP BY
 		// TODO: HAVING
 		// TODO: ORDER BY
+		// TODO: LIMIT
 		["[Nn][Oo][Tt]\\b", "return 'NOT';"],
 		["[Aa][Nn][Dd]\\b", "return 'AND';"],
+		["[Oo][Rr]\\b", "return 'OR';"],
 		// TODO: Between
 		// TODO: like
-		["[Oo][Rr]\\b", "return 'OR';"],
 		// identifiers
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
 		["`.+?`", "return 'IDENTIFIER2';"],
@@ -151,7 +152,13 @@ var grammar = {
 			["IDENTIFIER", "$$ = {id: $1};"],
 			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"],
 			["( select )", "$$ = {nest: $2};"],
+			["IDENTIFIER ( elist )", "$$ = {call: $1, args: $3};"],
 			["?", "$$ = {wildcard: true};"]
+		],
+		"elist": [
+			["", "$$ = [];"],
+			["e", "$$ = [$1];"],
+			["elist , e", "$$ = $1; $$.push($3);"],
 		],
 		"c": [
 			["e = e", "$$ = {cmp: '=', a: $1, b: $3};"],
