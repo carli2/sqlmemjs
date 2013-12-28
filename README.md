@@ -75,6 +75,7 @@ Supported Commands
 - CREATE TABLE table(col1 type1 PRIMARY KEY AUTO\_INCREMENT, col2 type2 DEFAULT value)
 - DROP TABLE [IF EXISTS] table
 - INSERT INTO table(col1, col2) VALUES (val11, val12), (val21, val22)
+- INSERT INTO table(col1, col2) SELECT ....
 - UPDATE table SET col1=val1, col2=val2
 - UPDATE table SET col1=val1, col2=val2 WHERE condition
 - DELETE FROM table WHERE condition

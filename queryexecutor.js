@@ -150,6 +150,7 @@ function SQLinMemory() {
 			// but also keep in mind that users might restart with reset
 		}
 		this.fetch = function() {
+			// TODO: prevent reading data that is too new (eternal loop with insert select)
 			if(this.cursor < table.data.length) {
 				// fetch one row
 				var tuple = table.data[this.cursor];
@@ -658,11 +659,14 @@ function SQLinMemory() {
 				walkThrough(query.where);
 			}
 			if(query.type === 'insert') {
-				for(var i = 0; i < query.rows.length; i++) {
-					for(var j = 0; j < query.rows[i].length; j++) {
-						walkThrough(query.rows[i][j]);
+				if(query.rows) {
+					for(var i = 0; i < query.rows.length; i++) {
+						for(var j = 0; j < query.rows[i].length; j++) {
+							walkThrough(query.rows[i][j]);
+						}
 					}
 				}
+				walkThrough(query.select);
 			}
 			if(query.type === 'update') {
 				for(var i in query.set) {
@@ -824,6 +828,7 @@ function SQLinMemory() {
 					cols[query.cols[i].id] = query.cols[i];
 				}
 				// create data structure for table
+				// TODO: move this functionality to Table
 				table = {id: query.id, schema: query.cols, cols: cols, data: [], primary: primary, cursors: []};
 				tables[query.id] = table;
 			}
@@ -857,17 +862,8 @@ function SQLinMemory() {
 				}
 			}
 			var last_insert = 0;
-			for(var i in query.rows) {
-				var row = query.rows[i];
-				if(row.length != cols.length) {
-					throw "INSERT row has wrong number of elements";
-				}
-				var tuple = {};
-				for(var j in row) {
-					// compile code of the insert query
-					var code = createFunction(cols[j], row[j], [], args);
-					tuple[code.id] = code.fn({}); // fill the tuples
-				}
+			//TODO: move this functionality to Table
+			function insertTuple(tuple) {
 				// fill default values and auto_increment
 				for(var j in table.schema) {
 					var col = table.schema[j];
@@ -899,6 +895,37 @@ function SQLinMemory() {
 				for(var j = 0; j < table.cursors.length; j++) {
 					table.cursors[j].insert(table.data.length-1);
 				}
+			}
+			if(query.rows) {
+				for(var i in query.rows) {
+					var row = query.rows[i];
+					if(row.length != cols.length) {
+						throw "INSERT row has wrong number of elements";
+					}
+					var tuple = {};
+					for(var j in row) {
+						// compile code of the insert query
+						var code = createFunction(cols[j], row[j], [], args);
+						tuple[code.id] = code.fn({}); // fill the tuples
+					}
+					insertTuple(tuple);
+				}
+			} else if(query.select) {
+				var rows = self.query(query.select, args);
+				var schema = rows.getSchema();
+				if(schema.length != cols.length) {
+					throw "Incompatible col count in INSERT SELECT";
+				}
+				var ituple;
+				while(ituple = rows.fetch()) {
+					var tuple = {};
+					for(var j = 0; j < schema.length; j++) {
+						tuple[cols[j]] = ituple[schema[j][0]];
+					}
+					insertTuple(tuple);
+				}
+			} else {
+				throw "unknown insert - this should not happen";
 			}
 			// TODO: update indexes
 			var result;

@@ -36,4 +36,5 @@ db.query("SELECT * FROM `person`").printTable();
 db.query("SELECT *, ? FROM `person` WHERE age > ?", 12, 30).printTable();
 db.query("SELECT Name, (SELECT age+?) as nextage FROM `person`", 2).printTable();
 db.query("DELETE * FROM `person` WHERE id=?", hanna).printTable();
+db.query("INSERT INTO person(Name, Age) SELECT Name, Age+? FROM person WHERE Age < 100", 20);
 db.query("SELECT * FROM `person`").printTable();

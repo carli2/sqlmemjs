@@ -98,7 +98,10 @@ var grammar = {
 		"droptable": [["DROP TABLE IDENTIFIER", "$$ = {type: 'droptable', id: $3};"], ["DROP TABLE IFEXISTS IDENTIFIER", "$$ = {type: 'droptable', id: $4, noerror: true};"]],
 
 		// insert syntax
-		"insert": [["INSERTINTO IDENTIFIER ( idlist ) VALUES insertrows", "$$ = {type: 'insert', table: $2, cols: $4, rows: $7};"]],
+		"insert": [
+			["INSERTINTO IDENTIFIER ( idlist ) VALUES insertrows", "$$ = {type: 'insert', table: $2, cols: $4, rows: $7};"],
+			["INSERTINTO IDENTIFIER ( idlist ) select", "$$ = {type: 'insert', table: $2, cols: $4, select: $6};"],
+		],
 		"idlist": [["", "$$ = [];"], ["IDENTIFIER", "$$ = [$1];"], ["idlist , IDENTIFIER", "$$ = $1; $$.push($3);"]],
 		"insertrows": [["insertrow", "$$ = [$1];"], ["insertrows , insertrow", "$$ = $1; $$.push($3);"]],
 		"insertrow": [["( valuelist )", "$$ = $2;"]],
