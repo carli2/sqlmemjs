@@ -32,7 +32,7 @@ function SQLinMemory() {
 			throw "unknown data type: " + type;
 		}
 		return datatypes[type];
-	}
+	};
 
 	/*
 	Data structure holding all tables
@@ -105,10 +105,10 @@ function SQLinMemory() {
 			}
 			// TODO: update indices
 			return last_insert;
-		}
+		};
 
 		// TODO: also move update and delete here in order to maintain transactions
-	}
+	};
 
 	/*
 	Template for all cursors
@@ -127,7 +127,7 @@ function SQLinMemory() {
 				result.push(tuple);
 			}
 			return result;
-		}
+		};
 
 		this.printTable = function(print) {
 			print = print || console.log;
@@ -147,7 +147,7 @@ function SQLinMemory() {
 				print(line);
 			}
 			print('');
-		}
+		};
 
 		this.assert = function(target) {
 			var source = this.toArray();
@@ -155,7 +155,7 @@ function SQLinMemory() {
 				console.log("assertion fail!");
 				console.log('IS:     ' + JSON.stringify(source));
 				console.log('SHOULD: ' + JSON.stringify(target));
-			}
+			};
 			if(source.length != target.length) {
 				print();
 				return false;
@@ -171,8 +171,8 @@ function SQLinMemory() {
 			this.reset();
 			this.printTable();
 			return true;
-		}
-	}
+		};
+	};
 	/*
 	Iterator that iterates over all tables (SHOW TABLES)
 	*/
@@ -187,7 +187,7 @@ function SQLinMemory() {
 		};
 		this.reset();
 		this.close = function() {
-		}
+		};
 		this.fetch = function() {
 			if(cursor < keys.length) {
 				// fetch one row
@@ -200,11 +200,11 @@ function SQLinMemory() {
 				}*/
 				return tuple;
 			}
-		}
+		};
 		this.getSchema = function() {
 			return [['IDENTIFIER', 'TEXT']];
-		}
-	}
+		};
+	};
 	tablesIterator.prototype = new Cursor();
 	/*
 	Iterator that iterates over all tuples of one table
@@ -243,7 +243,7 @@ function SQLinMemory() {
 			// unregister observer in table
 			observer.setActive(false);
 			// but also keep in mind that users might restart with reset
-		}
+		};
 		this.fetch = function() {
 			// TODO: prevent reading data that is too new (eternal loop with insert select)
 			if(this.cursor < table.data.length) {
@@ -255,15 +255,15 @@ function SQLinMemory() {
 				observer.setActive(true);
 				return tuple;
 			} else observer.setActive(false);
-		}
+		};
 		this.getSchema = function() {
 			var schema = [];
 			for(var i in table.schema) {
 				schema.push([table.schema[i].id, table.schema[i].type]);
 			}
 			return schema;
-		}
-	}
+		};
+	};
 	tableIterator.prototype = new Cursor();
 	/*
 	Find element of object and return attribute name with correct case
@@ -275,7 +275,7 @@ function SQLinMemory() {
 			if(i.toUpperCase() == str)
 				return i;
 		}
-	}
+	};
 	/*
 	Get the iterator for a table name
 	*/
@@ -286,7 +286,7 @@ function SQLinMemory() {
 		if(tablename) {
 			return new tableIterator(tables[tablename]);
 		}
-	}
+	};
 	/*
 	Create condition out of expression
 	@param id identifier of the row
@@ -303,17 +303,17 @@ function SQLinMemory() {
 				case 'and':
 				return function(tuples) {
 						return a(tuples) && b(tuples);
-					}
+					};
 				break;
 				case 'or':
 				return function(tuples) {
 						return a(tuples) || b(tuples);
-					}
+					};
 				break;
 				case 'not':
 				return function(tuples) {
 						return !a(tuples);
-					}
+					};
 				break;
 
 				default:
@@ -328,38 +328,38 @@ function SQLinMemory() {
 				case '=':
 				return function(tuples) {
 						return a(tuples) == b(tuples);
-					}
+					};
 				break;
 				case '<>':
 				return function(tuples) {
 						return a(tuples) != b(tuples);
-					}
+					};
 				break;
 				case '<':
 				return function(tuples) {
 						return a(tuples) < b(tuples);
-					}
+					};
 				break;
 				case '<=':
 				return function(tuples) {
 						return a(tuples) <= b(tuples);
-					}
+					};
 				break;
 				case '>':
 				return function(tuples) {
 						return a(tuples) > b(tuples);
-					}
+					};
 				break;
 				case '>=':
 				return function(tuples) {
 						return a(tuples) >= b(tuples);
-					}
+					};
 				break;
 				case 'between':
 				return function(tuples) {
 						var v = a(tuples);
 						return v >= b(tuples) && v <= c(tuples);
-					}
+					};
 				break;
 
 				default:
@@ -367,7 +367,7 @@ function SQLinMemory() {
 			}
 		}
 		// Default
-		return function(t){return true;}
+		return function(t){return true;};
 	}
 	/*
 	Create function out of expression
@@ -389,7 +389,7 @@ function SQLinMemory() {
 					id: id,
 					type: (typeof value === 'number') ? 'NUMBER' : 'TEXT',
 					fn: function(tuples) { return value; }
-				}
+				};
 			} else if(code.id) {
 				// element fetch
 				for(var i in schema) {
@@ -414,7 +414,7 @@ function SQLinMemory() {
 						fn: function(tuples) {
 							return a(tuples) + b(tuples);
 						}
-					}
+					};
 					break;
 					case 'sub':
 					return {
@@ -423,7 +423,7 @@ function SQLinMemory() {
 						fn: function(tuples) {
 							return a(tuples) - b(tuples);
 						}
-					}
+					};
 					break;
 					case 'mul':
 					return {
@@ -432,7 +432,7 @@ function SQLinMemory() {
 						fn: function(tuples) {
 							return a(tuples) * b(tuples);
 						}
-					}
+					};
 					break;
 					case 'div':
 					return {
@@ -441,7 +441,7 @@ function SQLinMemory() {
 						fn: function(tuples) {
 							return a(tuples) / b(tuples);
 						}
-					}
+					};
 					break;
 					case 'neg':
 					return {
@@ -450,7 +450,7 @@ function SQLinMemory() {
 						fn: function(tuples) {
 							return -a(tuples);
 						}
-					}
+					};
 					break;
 					// TODO: other arithmetic operations
 
@@ -477,7 +477,7 @@ function SQLinMemory() {
 							findFrom(q[i]);
 						}
 					}
-				}
+				};
 				findFrom(code.nest);
 				// create the iterator (we will reset the iterator for each value)
 				var iterator = self.query(code.nest, args);
@@ -508,7 +508,7 @@ function SQLinMemory() {
 					if(code.args.length != n) {
 						throw f + " expects " + n + " arguments";
 					}
-				}
+				};
 				for(var i = 0; i < code.args.length; i++) {
 					code.args[i] = createFunction('', code.args[i], schema, args);
 				}
@@ -559,19 +559,19 @@ function SQLinMemory() {
 		var count = 0;
 		this.reset = function() {
 			count = 0;
-		}
+		};
 		this.close = function() {
-		}
+		};
 		this.fetch = function() {
 			if(count == 0) {
 				count++;
 				return {VALUE: value};
 			}
-		}
+		};
 		this.getSchema = function() {
 			return [['VALUE', type]];
-		}
-	}
+		};
+	};
 	singleValue.prototype = new Cursor();
 	/*
 	Single tuple select (1 row, n cols)
@@ -585,19 +585,19 @@ function SQLinMemory() {
 			if(newval) {
 				value = newval;
 			}
-		}
+		};
 		this.close = function() {
-		}
+		};
 		this.fetch = function() {
 			if(count == 0) {
 				count++;
 				return value;
 			}
-		}
+		};
 		this.getSchema = function() {
 			return schema;
-		}
-	}
+		};
+	};
 	singleTuple.prototype = new Cursor();
 	/*
 	Traditional cross join
@@ -609,11 +609,11 @@ function SQLinMemory() {
 			t1.reset();
 			leftTuple = t1.fetch();
 			t2.reset();
-		}
+		};
 		this.close = function() {
 			t1.close();
 			t2.close();
-		}
+		};
 		this.getSchema = function() {
 			var r = [];
 			var s = t1.getSchema();
@@ -621,7 +621,7 @@ function SQLinMemory() {
 			s = t2.getSchema();
 			for(var i in s) r.push(s[i]);
 			return r;
-		}
+		};
 		this.fetch = function() {
 			if(!leftTuple) return undefined;
 			var rightTuple = t2.fetch();
@@ -642,8 +642,8 @@ function SQLinMemory() {
 				tuple[i] = rightTuple[i];
 			}
 			return tuple;
-		}
-	}
+		};
+	};
 	crossJoin.prototype = new Cursor();
 	/*
 	Union of two iterators
@@ -665,35 +665,35 @@ function SQLinMemory() {
 		this.reset = function() {
 			a.reset();
 			b.reset();
-		}
+		};
 		this.close = function() {
 			a.close();
 			b.close();
-		}
+		};
 		this.getSchema = function() {
 			return a.getSchema();
-		}
+		};
 		this.fetch = function() {
 			return a.fetch() || b.fetch();
-		}
-	}
+		};
+	};
 	Union.prototype = new Cursor();
 	// add name to a tables identifiers
 	function renameSchema(table, prefix) {
 		var t = table, p = prefix;
 		this.reset = function() {
 			t.reset();
-		}
+		};
 		this.close = function() {
 			t.close();
-		}
+		};
 		this.getSchema = function() {
 			var r = [];
 			var s = t.getSchema();
 			for(var i in s) r.push(s[i]);
 			for(var i in s) r.push([p+'.'+s[i][0], s[i][1]]);
 			return r;
-		}
+		};
 		this.fetch = function() {
 			var tuple = t.fetch();
 			if(!tuple) return tuple;
@@ -701,8 +701,8 @@ function SQLinMemory() {
 				tuple[p+'.'+i] = tuple[i];
 			}
 			return tuple;
-		}
-	}
+		};
+	};
 	renameSchema.prototype = new Cursor();
 	/*
 	Map: convert a tuple with a function
@@ -713,18 +713,18 @@ function SQLinMemory() {
 	function Map(table, schema, fn) {
 		this.reset = function() {
 			table.reset();
-		}
+		};
 		this.close = function() {
 			table.close();
-		}
+		};
 		this.getSchema = function() {
 			return schema;
-		}
+		};
 		this.fetch = function() {
 			var tuple = table.fetch();
 			if(tuple) return fn(tuple);
-		}
-	}
+		};
+	};
 	Map.prototype = new Cursor();
 	/*
 	Filter: only pass accepting tuples
@@ -734,13 +734,13 @@ function SQLinMemory() {
 	function Filter(table, fn) {
 		this.reset = function() {
 			table.reset();
-		}
+		};
 		this.close = function() {
 			table.close();
-		}
+		};
 		this.getSchema = function() {
 			return table.getSchema;
-		}
+		};
 		this.fetch = function() {
 			while(true) {
 				var tuple = table.fetch();
@@ -754,8 +754,8 @@ function SQLinMemory() {
 				}
 				// fetch next element
 			}
-		}
-	}
+		};
+	};
 	Filter.prototype = new Cursor();
 	/*
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
@@ -814,7 +814,7 @@ function SQLinMemory() {
 		}
 		walkThrough(query);
 		return query;
-	}
+	};
 	/*
 	Main query method
 	*/
@@ -1089,7 +1089,7 @@ function SQLinMemory() {
 			return result;
 		})();
 		throw "unknown command: " + JSON.stringify(query);
-	}
+	};
 	this.exportJSON = function() {
 		var result = {};
 		for(var t in tables) {
@@ -1099,13 +1099,13 @@ function SQLinMemory() {
 			table.data = tables[t].data;
 		}
 		return result;
-	}
+	};
 	this.importJSON = function(json) {
 		for(var t in json) {
 			var table = new Table(t, json[t].schema);
 			table.data = json[t].data;
 		}
-	}
+	};
 }
 
 if(typeof exports) {
