@@ -392,9 +392,10 @@ function SQLinMemory() {
 				};
 			} else if(code.id) {
 				// element fetch
-				for(var i in schema) {
-					var x = schema[i][0];
-					if(code.id.toUpperCase() == x.toUpperCase()) {
+				for(var i = 0; i < schema.length; i++) {
+					var x = schema[i][0]; // schema relevant.relevant
+					var y = /\.([a-zA-Z][a-zA-Z_0-9]*?)$/.exec(x); // schema something.relevant
+					if(code.id.toUpperCase() == x.toUpperCase() || y && code.id.toUpperCase() == y[1].toUpperCase()) {
 						return {
 							id: id,
 							type: schema[i][1],
@@ -690,17 +691,17 @@ function SQLinMemory() {
 		this.getSchema = function() {
 			var r = [];
 			var s = t.getSchema();
-			for(var i in s) r.push(s[i]);
 			for(var i in s) r.push([p+'.'+s[i][0], s[i][1]]);
 			return r;
 		};
 		this.fetch = function() {
 			var tuple = t.fetch();
 			if(!tuple) return tuple;
+			var ntuple = {};
 			for(var i in tuple) {
-				tuple[p+'.'+i] = tuple[i];
+				ntuple[p+'.'+i] = tuple[i];
 			}
-			return tuple;
+			return ntuple;
 		};
 	};
 	renameSchema.prototype = new Cursor();
@@ -815,6 +816,37 @@ function SQLinMemory() {
 		};
 	};
 	Skipper.prototype = new Cursor();
+	/*
+	Sorter: Sort all entries. For sorting, all entries have to be fetched.
+	@param table table to sort
+	@param sortfn sort criteria
+	*/
+	function Sorter(table, sortfn) {
+		var data = [], tuple, cursor = 0;
+		// at first, fetch all data
+		while(tuple = table.fetch()) {
+			data.push(tuple);
+		}
+		// sort everything
+		data.sort(sortfn);
+		this.reset = function() {
+			// no reset; always stay with old data
+			cursor = 0;
+		};
+		this.close = function() {
+			// no need to close since we fetched everything
+		};
+		this.getSchema = function() {
+			return table.getSchema();
+		};
+		this.fetch = function() {
+			// just fetch the next prepared row
+			if(cursor < data.length) {
+				return data[cursor++];
+			}
+		};
+	};
+	Sorter.prototype = new Cursor();
 	/*
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
 	*/
@@ -986,10 +1018,27 @@ function SQLinMemory() {
 			// TODO: Having
 			// ORDER BY
 			if(query.order) {
+				var schema = table.getSchema();
 				// prepare all cols
 				for(var i = 0; i < query.order.length; i++) {
-					query.order[i].e = createFunction
+					query.order[i].e = createFunction('', query.order[i].e, schema, args);
 				}
+				var sortfn = function(a, b) {
+					for(var i = 0; i < query.order.length; i++) {
+						var xa = query.order[i].e.fn(a);
+						var xb = query.order[i].e.fn(b);
+						// evaluate with this criteria and compare
+						if(query.order[i].desc) {
+							if(xa > xb) return -1;
+							if(xa < xb) return 1;
+						} else {
+							if(xa > xb) return 1;
+							if(xa < xb) return -1;
+						}
+					}
+					return 0; // the rest is equal
+				};
+				table = new Sorter(table, sortfn);
 			}
 			// LIMIT
 			if(query.startcount !== undefined) {
