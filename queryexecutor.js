@@ -996,7 +996,15 @@ function SQLinMemory() {
 			}
 			var newtuple = {}, schema = [];
 			// compile calculations
-			for(var i in cols) {
+			for(var i = 0; i < cols.length; i++) {
+				if(cols[i][0] == '-') {
+					// unnamed column
+					if(typeof cols[i][1] == 'object' && cols[i][1].id) {
+						cols[i][0] = cols[i][1].id;
+					} else {
+						cols[i][0] = 'col'+String(i+1);
+					}
+				}
 				var f = createFunction(cols[i][0], cols[i][1], from.getSchema(), args);
 				newtuple[f.id] = f.fn;
 				schema.push([f.id, f.type]);
