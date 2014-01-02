@@ -42,5 +42,8 @@ db.query("INSERT INTO person(Name, Age) SELECT Name, Age+? FROM person WHERE Age
 db.query("SELECT * FROM `person`").printTable();
 db.query("SELECT * FROM `person` LIMIT 300").printTable();
 db.query("SELECT * FROM `person` LIMIT 3").printTable();
-db.query("SELECT * FROM `person` LIMIT 3, 1").printTable();
+db.query("SELECT * FROM `person` LIMIT ?, 1", 3).printTable();
 db.query("SELECT * FROM `person` LIMIT 3, 100").printTable();
+db.query("SELECT * FROM `person` ORDER BY Age").printTable();
+db.query("SELECT * FROM `person` ORDER BY Age DESC").printTable();
+db.query("SELECT * FROM `person` ORDER BY Name, Age").printTable();

@@ -844,11 +844,18 @@ function SQLinMemory() {
 				walkThrough(query.nest);
 			}
 			if(query.type === 'select') {
-				for(var i in query.expr) {
+				for(var i = 0; i < query.expr.length; i++) {
 					walkThrough(query.expr[i][1]);
 				}
 				walkThrough(query.from);
 				walkThrough(query.where);
+				if(query.order) {
+					for(var i = 0; i < query.order.length; i++) {
+						walkThrough(query.order[i].e);
+					}
+				}
+				walkThrough(query.maxcount);
+				walkThrough(query.startcount);
 			}
 			if(query.type === 'insert') {
 				if(query.rows) {
@@ -977,13 +984,19 @@ function SQLinMemory() {
 			});
 			// TODO: Group by
 			// TODO: Having
-			// TODO: Order
+			// ORDER BY
+			if(query.order) {
+				// prepare all cols
+				for(var i = 0; i < query.order.length; i++) {
+					query.order[i].e = createFunction
+				}
+			}
 			// LIMIT
 			if(query.startcount !== undefined) {
-				table = new Skipper(table, query.startcount);
+				table = new Skipper(table, createFunction('', query.startcount, [], args).fn({}));
 			}
 			if(query.maxcount !== undefined) {
-				table = new Limiter(table, query.maxcount);
+				table = new Limiter(table, createFunction('', query.maxcount, [], args).fn({}));
 			}
 			return table;
 		})(); else if(query.type == 'union') return (function(){
