@@ -87,6 +87,10 @@ Supported Commands
 - SELECT 1/2 UNION SELECT 1+2
 - SELECT a+b FROM (SELECT 1 as a, 2 as b)
 - SELECT 1+(SELECT 2+3)
+- SELECT * FROM table WHERE value BETWEEN 1 AND 6
+- SELECT * FROM table LIMIT 5
+- SELECT * FROM table LIMIT 5, 15
+- SELECT * FROM table ORDER BY value [DESC|ASC]
 
 Supported Data Types
 --------------------
