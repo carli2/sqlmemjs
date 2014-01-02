@@ -33,8 +33,10 @@ var grammar = {
 		["[Ww][Hh][Ee][Rr][Ee]\\b", "return 'WHERE';"],
 		// TODO: GROUP BY
 		// TODO: HAVING
-		// TODO: ORDER BY
-		// TODO: LIMIT
+		["[Oo][Rr][Dd][Ee][Rr]\\s+[Bb][Yy]\\b", "return 'ORDERBY';"],
+		["[Aa][Ss][Cc]\\b", "return 'ASC';"],
+		["[Dd][Ee][Ss][Cc]\\b", "return 'DESC';"],
+		["[Ll][Ii][Mm][Ii][Tt]\\b", "return 'LIMIT';"],
 		["[Nn][Oo][Tt]\\b", "return 'NOT';"],
 		["[Aa][Nn][Dd]\\b", "return 'AND';"],
 		["[Oo][Rr]\\b", "return 'OR';"],
@@ -126,11 +128,11 @@ var grammar = {
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
 		"select2": [["select1", "$$ = $1;"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
 		"select3": [["select2", "$$ = $1;"], ["select2 WHERE c", "$$ = $1; $$.where = $3;"]],
-		// TODO: GROUP BY
-		// TODO: HAVING
-		// TODO: ORDER BY
-		// TODO: LIMIT
-		"select": [["select3", "$$ = $1;"], ["select UNION select", "$$ = {type: 'union', a: $1, b: $3};"]],
+		"select4": [["select3", "$$ = $1;"]], // TODO: GROUP BY
+		"select5": [["select4", "$$ = $1;"]], // TODO: HAVING
+		"select6": [["select5", "$$ = $1;"], ["select5 ORDERBY ordercols", "$$ = $1; $$.order = $3;"]],
+		"select7": [["select6", "$$ = $1;"], ["select6 LIMIT number", "$$ = $1; $$.maxcount = $3;"], ["select6 LIMIT number , number", "$$ = $1; $$.maxcount = $3; $$.startcount = $5;"]],
+		"select": [["select7", "$$ = $1;"], ["select UNION select", "$$ = {type: 'union', a: $1, b: $3};"]],
 
 		"col": [["e AS IDENTIFIER", "$$ = [$3, $1];"], ["e", "$$ = ['', $1];"],
 			["*", "$$ = '';"], ["IDENTIFIER . *", "$$ = $1;"]],
@@ -147,7 +149,7 @@ var grammar = {
 			["e / e", "$$ = {op: 'div', a: $1, b: $3};"],
 			["- e", "$$ = {op: 'neg', a: $2};",  {prec: "UMINUS"}],
 			["( e )", "$$ = $2;"],
-			["NUMBER", "$$ = Number(yytext);"],
+			["number", "$$ = $1;"],
 			["STRING", "$$ = $1;"],
 			["IDENTIFIER", "$$ = {id: $1};"],
 			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"],
@@ -176,7 +178,8 @@ var grammar = {
 			["IDENTIFIER1", "$$ = $1;"],
 			["IDENTIFIER2", "$$ = $1.substring(1, $1.length-1);"]
 		],
-		"STRING": [["STRINGX", "$$ = eval(yytext)"]]
+		"STRING": [["STRINGX", "$$ = eval(yytext)"]],
+		"number": [["NUMBER", "$$ = Number(yytext);"]]
 	}
 };
 

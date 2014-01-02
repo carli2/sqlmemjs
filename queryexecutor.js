@@ -739,7 +739,7 @@ function SQLinMemory() {
 			table.close();
 		};
 		this.getSchema = function() {
-			return table.getSchema;
+			return table.getSchema();
 		};
 		this.fetch = function() {
 			while(true) {
@@ -757,6 +757,64 @@ function SQLinMemory() {
 		};
 	};
 	Filter.prototype = new Cursor();
+	/*
+	Limiter: do not allow more than n elements
+	@param table table to filter
+	@param n max number of rows to fetch
+	*/
+	function Limiter(table, n) {
+		var nleft = n;
+		this.reset = function() {
+			table.reset();
+			nleft = n;
+		};
+		this.close = function() {
+			table.close();
+		};
+		this.getSchema = function() {
+			return table.getSchema();
+		};
+		this.fetch = function() {
+			if(nleft > 0) {
+				var result = table.fetch();
+				nleft--;
+				if(nleft <= 0) {
+					// close input after fetching everything (but it is resettable)
+					table.close();
+				}
+				return result;
+			}
+		};
+	};
+	Limiter.prototype = new Cursor();
+	/*
+	Skipper: Skip n entries before returning anything
+	@param table table to filter
+	@param n number of rows to skip
+	*/
+	function Skipper(table, n) {
+		for(var i = 0; i < n; i++) {
+			// throw away n rows
+			table.fetch();
+		}
+		this.reset = function() {
+			table.reset();
+			for(var i = 0; i < n; i++) {
+				// throw away n rows
+				table.fetch();
+			}
+		};
+		this.close = function() {
+			table.close();
+		};
+		this.getSchema = function() {
+			return table.getSchema();
+		};
+		this.fetch = function() {
+			return table.fetch();
+		};
+	};
+	Skipper.prototype = new Cursor();
 	/*
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
 	*/
@@ -920,6 +978,13 @@ function SQLinMemory() {
 			// TODO: Group by
 			// TODO: Having
 			// TODO: Order
+			// LIMIT
+			if(query.startcount !== undefined) {
+				table = new Skipper(table, query.startcount);
+			}
+			if(query.maxcount !== undefined) {
+				table = new Limiter(table, query.maxcount);
+			}
 			return table;
 		})(); else if(query.type == 'union') return (function(){
 			// TODO: handle arguments
