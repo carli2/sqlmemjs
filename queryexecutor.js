@@ -180,7 +180,7 @@ function SQLinMemory() {
 		var keys, cursor;
 		this.reset = function() {
 			keys = ['TABLES'];
-			for(tab in tables) {
+			for(var tab in tables) {
 				keys.push(tab);
 			}
 			cursor = 0;
@@ -254,7 +254,9 @@ function SQLinMemory() {
 				// observe changes as we move forward
 				observer.setActive(true);
 				return tuple;
-			} else observer.setActive(false);
+			} else {
+				observer.setActive(false);
+			}
 		};
 		this.getSchema = function() {
 			var schema = [];
@@ -1083,6 +1085,7 @@ function SQLinMemory() {
 				}
 				// create the table
 				table = new Table(query.id, query.cols);
+				// the constructor has the side effect to register itself
 			}
 			return new singleValue(query.id, 'STRING');
 			// TODO: ALTER
@@ -1147,7 +1150,7 @@ function SQLinMemory() {
 			}
 			var result;
 			if(table.primary) {
-				result = new singleValue(last_insert, table.cols[table.primary].type)
+				result = new singleValue(last_insert, table.cols[table.primary].type);
 				result.insert_id = last_insert;
 			} else {
 				result = new singleValue(0, 'INTEGER');
