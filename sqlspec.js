@@ -61,7 +61,7 @@ var grammar = {
 		["\\(", "return '(';"],
 		["\\)", "return ')';"],
 		["\\?", "return '?';"],
-		["$", "return 'EOF';"],
+		["$", "return 'EOF';"]
 		]
 	},
 	operators: [
@@ -103,7 +103,7 @@ var grammar = {
 		// insert syntax
 		"insert": [
 			["INSERTINTO IDENTIFIER ( idlist ) VALUES insertrows", "$$ = {type: 'insert', table: $2, cols: $4, rows: $7};"],
-			["INSERTINTO IDENTIFIER ( idlist ) select", "$$ = {type: 'insert', table: $2, cols: $4, select: $6};"],
+			["INSERTINTO IDENTIFIER ( idlist ) select", "$$ = {type: 'insert', table: $2, cols: $4, select: $6};"]
 		],
 		"idlist": [["", "$$ = [];"], ["IDENTIFIER", "$$ = [$1];"], ["idlist , IDENTIFIER", "$$ = $1; $$.push($3);"]],
 		"insertrows": [["insertrow", "$$ = [$1];"], ["insertrows , insertrow", "$$ = $1; $$.push($3);"]],
@@ -162,7 +162,7 @@ var grammar = {
 		"elist": [
 			["", "$$ = [];"],
 			["e", "$$ = [$1];"],
-			["elist , e", "$$ = $1; $$.push($3);"],
+			["elist , e", "$$ = $1; $$.push($3);"]
 		],
 		"c": [
 			["e = e", "$$ = {cmp: '=', a: $1, b: $3};"],
