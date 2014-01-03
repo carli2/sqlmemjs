@@ -32,7 +32,7 @@ function SQLinMemory() {
 			throw "unknown data type: " + type;
 		}
 		return datatypes[type];
-	};
+	}
 
 	/*
 	Data structure holding all tables
@@ -46,7 +46,7 @@ function SQLinMemory() {
 		tables[id] = this;
 		this.id = id;
 		this.schema = schema;
-		this.primary = undefined;
+		this.primary = null;
 		this.cols = {};
 		// create table: verify col types
 		for(var i in schema) {
@@ -57,7 +57,7 @@ function SQLinMemory() {
 			this.schema[i].type = typ;
 			if(schema[i].primary) {
 				if(this.primary) {
-					throw "Two columns are marked primary: " + primary + " and " + schema[i].id;
+					throw "Two columns are marked primary: " + this.primary + " and " + schema[i].id;
 				}
 				this.primary = schema[i].id;
 			}
@@ -108,7 +108,7 @@ function SQLinMemory() {
 		};
 
 		// TODO: also move update and delete here in order to maintain transactions
-	};
+	}
 
 	/*
 	Template for all cursors
@@ -118,7 +118,7 @@ function SQLinMemory() {
 		this.fetch =
 		this.close =
 		function() {};
-		this.getSchema = function() {return [];}
+		this.getSchema = function() {return [];};
 		
 		this.toArray = function() {
 			var result = [];
@@ -155,7 +155,8 @@ function SQLinMemory() {
 				console.log("assertion fail!");
 				console.log('IS:     ' + JSON.stringify(source));
 				console.log('SHOULD: ' + JSON.stringify(target));
-			};
+			}
+
 			if(source.length != target.length) {
 				print();
 				return false;
@@ -172,7 +173,7 @@ function SQLinMemory() {
 			this.printTable();
 			return true;
 		};
-	};
+	}
 	/*
 	Iterator that iterates over all tables (SHOW TABLES)
 	*/
@@ -180,7 +181,7 @@ function SQLinMemory() {
 		var keys, cursor;
 		this.reset = function() {
 			keys = ['TABLES'];
-			for(tab in tables) {
+			for(var tab in tables) {
 				keys.push(tab);
 			}
 			cursor = 0;
@@ -199,13 +200,16 @@ function SQLinMemory() {
 					cursor++;
 				}*/
 				return tuple;
-			}
+			} else {
+                return null;
+            }
 		};
 		this.getSchema = function() {
 			return [['IDENTIFIER', 'TEXT']];
 		};
-	};
-	tablesIterator.prototype = new Cursor();
+    }
+
+    tablesIterator.prototype = new Cursor();
 	/*
 	Iterator that iterates over all tuples of one table
 	*/
@@ -254,7 +258,10 @@ function SQLinMemory() {
 				// observe changes as we move forward
 				observer.setActive(true);
 				return tuple;
-			} else observer.setActive(false);
+			} else {
+                observer.setActive(false);
+                return null;
+            }
 		};
 		this.getSchema = function() {
 			var schema = [];
@@ -263,7 +270,7 @@ function SQLinMemory() {
 			}
 			return schema;
 		};
-	};
+	}
 	tableIterator.prototype = new Cursor();
 	/*
 	Find element of object and return attribute name with correct case
@@ -275,7 +282,8 @@ function SQLinMemory() {
 			if(i.toUpperCase() == str)
 				return i;
 		}
-	};
+        return null;
+	}
 	/*
 	Get the iterator for a table name
 	*/
@@ -286,7 +294,9 @@ function SQLinMemory() {
 		if(tablename) {
 			return new tableIterator(tables[tablename]);
 		}
-	};
+        return null;
+
+	}
 	/*
 	Create condition out of expression
 	@param id identifier of the row
@@ -367,7 +377,7 @@ function SQLinMemory() {
 			}
 		}
 		// Default
-		return function(t){return true;};
+		return function(){return true;};
 	}
 	/*
 	Create function out of expression
@@ -388,7 +398,7 @@ function SQLinMemory() {
 				return {
 					id: id,
 					type: (typeof value === 'number') ? 'NUMBER' : 'TEXT',
-					fn: function(tuples) { return value; }
+					fn: function() { return value; }
 				};
 			} else if(code.id) {
 				// element fetch
@@ -404,7 +414,7 @@ function SQLinMemory() {
 					}
 				}
 				throw "Unknown identifier: " + code.id;
-			} else if(code.op) {
+			} else if(typeof code.op) {
 				var a = code.a !== undefined ? createFunction('', code.a, schema, args).fn : undefined;
 				var b = code.b !== undefined ? createFunction('', code.b, schema, args).fn : undefined;
 				switch(code.op) {
@@ -478,7 +488,7 @@ function SQLinMemory() {
 							findFrom(q[i]);
 						}
 					}
-				};
+				}
 				findFrom(code.nest);
 				// create the iterator (we will reset the iterator for each value)
 				var iterator = self.query(code.nest, args);
@@ -509,7 +519,8 @@ function SQLinMemory() {
 					if(code.args.length != n) {
 						throw f + " expects " + n + " arguments";
 					}
-				};
+				}
+
 				for(var i = 0; i < code.args.length; i++) {
 					code.args[i] = createFunction('', code.args[i], schema, args);
 				}
@@ -568,11 +579,13 @@ function SQLinMemory() {
 				count++;
 				return {VALUE: value};
 			}
+            return null;
 		};
 		this.getSchema = function() {
 			return [['VALUE', type]];
 		};
-	};
+        return null;
+	}
 	singleValue.prototype = new Cursor();
 	/*
 	Single tuple select (1 row, n cols)
@@ -598,7 +611,8 @@ function SQLinMemory() {
 		this.getSchema = function() {
 			return schema;
 		};
-	};
+	}
+
 	singleTuple.prototype = new Cursor();
 	/*
 	Traditional cross join
@@ -644,7 +658,8 @@ function SQLinMemory() {
 			}
 			return tuple;
 		};
-	};
+	}
+
 	crossJoin.prototype = new Cursor();
 	/*
 	Union of two iterators
@@ -677,7 +692,7 @@ function SQLinMemory() {
 		this.fetch = function() {
 			return a.fetch() || b.fetch();
 		};
-	};
+	}
 	Union.prototype = new Cursor();
 	// add name to a tables identifiers
 	function renameSchema(table, prefix) {
@@ -703,7 +718,7 @@ function SQLinMemory() {
 			}
 			return ntuple;
 		};
-	};
+	}
 	renameSchema.prototype = new Cursor();
 	/*
 	Map: convert a tuple with a function
@@ -724,8 +739,9 @@ function SQLinMemory() {
 		this.fetch = function() {
 			var tuple = table.fetch();
 			if(tuple) return fn(tuple);
+            return null;
 		};
-	};
+	}
 	Map.prototype = new Cursor();
 	/*
 	Filter: only pass accepting tuples
@@ -756,7 +772,8 @@ function SQLinMemory() {
 				// fetch next element
 			}
 		};
-	};
+	}
+
 	Filter.prototype = new Cursor();
 	/*
 	Limiter: do not allow more than n elements
@@ -785,8 +802,9 @@ function SQLinMemory() {
 				}
 				return result;
 			}
+            return null;
 		};
-	};
+	}
 	Limiter.prototype = new Cursor();
 	/*
 	Skipper: Skip n entries before returning anything
@@ -814,7 +832,7 @@ function SQLinMemory() {
 		this.fetch = function() {
 			return table.fetch();
 		};
-	};
+	}
 	Skipper.prototype = new Cursor();
 	/*
 	Sorter: Sort all entries. For sorting, all entries have to be fetched.
@@ -844,8 +862,9 @@ function SQLinMemory() {
 			if(cursor < data.length) {
 				return data[cursor++];
 			}
+            return null;
 		};
-	};
+	}
 	Sorter.prototype = new Cursor();
 	/*
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
@@ -1082,7 +1101,7 @@ function SQLinMemory() {
 					}
 				}
 				// create the table
-				table = new Table(query.id, query.cols);
+				table = new Table(query.id, query.cols); //TODO: Why it`s here ? It`s unused
 			}
 			return new singleValue(query.id, 'STRING');
 			// TODO: ALTER
@@ -1147,7 +1166,7 @@ function SQLinMemory() {
 			}
 			var result;
 			if(table.primary) {
-				result = new singleValue(last_insert, table.cols[table.primary].type)
+				result = new singleValue(last_insert, table.cols[table.primary].type);
 				result.insert_id = last_insert;
 			} else {
 				result = new singleValue(0, 'INTEGER');
