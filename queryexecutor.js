@@ -322,31 +322,43 @@ function SQLinMemory() {
 				TABLE: 'TABLES',
 				COLUMN_NAME: 'IDENTIFIER',
 				COLUMN_POSITION: 1,
-				DATATYPE: 'TEXT'
+				DATATYPE: 'TEXT',
+				COMMENT: 'Identifier of the table'
 			});
 			data.push({
 				TABLE: 'COLUMNS',
 				COLUMN_NAME: 'TABLE',
 				COLUMN_POSITION: 1,
-				DATATYPE: 'TEXT'
+				DATATYPE: 'TEXT',
+				COMMENT: 'Name of the table'
 			});
 			data.push({
 				TABLE: 'COLUMNS',
 				COLUMN_NAME: 'COLUMN_NAME',
 				COLUMN_POSITION: 2,
-				DATATYPE: 'TEXT'
+				DATATYPE: 'TEXT',
+				COMMENT: 'Name of the column'
 			});
 			data.push({
 				TABLE: 'COLUMNS',
 				COLUMN_NAME: 'COLUMN_POSITION',
 				COLUMN_POSITION: 3,
-				DATATYPE: 'INTEGER'
+				DATATYPE: 'INTEGER',
+				COMMENT: 'Position inside the table'
 			});
 			data.push({
 				TABLE: 'COLUMNS',
 				COLUMN_NAME: 'DATATYPE',
 				COLUMN_POSITION: 4,
-				DATATYPE: 'TEXT'
+				DATATYPE: 'TEXT',
+				COMMENT: 'Data type of the column'
+			});
+			data.push({
+				TABLE: 'COLUMNS',
+				COLUMN_NAME: 'COMMENT',
+				COLUMN_POSITION: 5,
+				DATATYPE: 'TEXT',
+				COMMENT: 'Comment that describes the column'
 			});
 			for(var t in tables) {
 				for(var i = 0; i < tables[t].schema.length; i++) {
@@ -354,11 +366,12 @@ function SQLinMemory() {
 						TABLE: t,
 						COLUMN_NAME: tables[t].schema[i].id,
 						COLUMN_POSITION: i+1,
-						DATATYPE: tables[t].schema[i].type
+						DATATYPE: tables[t].schema[i].type,
+						COMMENT: tables[t].schema[i].comment
 					});
 				}
 			}
-			return new multiTuple(data, [['TABLE', 'TEXT'], ['COLUMN_NAME', 'TEXT'], ['COLUMN_POSITION', 'INTEGER'], ['DATATYPE', 'TEXT']]);
+			return new multiTuple(data, [['TABLE', 'TEXT'], ['COLUMN_NAME', 'TEXT'], ['COLUMN_POSITION', 'INTEGER'], ['DATATYPE', 'TEXT'], ['COMMENT', 'TEXT']]);
 		}
 		// a normal table
 		var tablename = convertStringForAttribute(identifier, tables);
