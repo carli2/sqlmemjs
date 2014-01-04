@@ -50,7 +50,7 @@ function SQLinMemory() {
 			if(!typ) {
 				throw "unknown data type: " + schema[i].type;
 			}
-			this.schema[i].type = typ;
+			this.schema[i].type = typ; // TODO: remove this as the type diviersity gives us meta information for rendering
 			if(schema[i].primary) {
 				if(this.primary) {
 					throw "Two columns are marked primary: " + primary + " and " + schema[i].id;
@@ -216,42 +216,6 @@ function SQLinMemory() {
 		};
 	};
 	/**
-	Iterator that iterates over all tables (SHOW TABLES)
-	@private
-	@constructor
-	*/
-	function tablesIterator() {
-		Cursor.call(this);
-
-		var keys, cursor;
-		this.reset = function() {
-			keys = ['TABLES'];
-			for(var tab in tables) {
-				keys.push(tab);
-			}
-			cursor = 0;
-		};
-		this.reset();
-		this.close = function() {
-		};
-		this.fetch = function() {
-			if(cursor < keys.length) {
-				// fetch one row
-				var tuple = {IDENTIFIER: keys[cursor]};
-				// move cursor one further
-				cursor++;
-				// skip all broken tables
-				/*while(!tables[keys[cursor]]) {
-					cursor++;
-				}*/
-				return tuple;
-			}
-		};
-		this.getSchema = function() {
-			return [['IDENTIFIER', 'TEXT']];
-		};
-	};
-	/**
 	Iterator that iterates over all tuples of one table
 	@private
 	@constructor
@@ -341,8 +305,62 @@ function SQLinMemory() {
 	@param {string} identifier case insensitive identifier of the table
 	*/
 	function getTableIterator(identifier) {
-		if(identifier.toUpperCase() == 'TABLES')
-			return new tablesIterator();
+		var data;
+		// TODO: DRY
+		if(identifier.toUpperCase() == 'TABLES') {
+			data = [];
+			data.push({IDENTIFIER: 'TABLES'});
+			data.push({IDENTIFIER: 'COLUMNS'});
+			for(var t in tables) {
+				data.push({IDENTIFIER: t});
+			}
+			return new multiTuple(data, [['IDENTIFIER', 'TEXT']]);
+		}
+		if(identifier.toUpperCase() == 'COLUMNS') {
+			data = [];
+			data.push({
+				TABLE: 'TABLES',
+				COLUMN_NAME: 'IDENTIFIER',
+				COLUMN_POSITION: 1,
+				DATATYPE: 'TEXT'
+			});
+			data.push({
+				TABLE: 'COLUMNS',
+				COLUMN_NAME: 'TABLE',
+				COLUMN_POSITION: 1,
+				DATATYPE: 'TEXT'
+			});
+			data.push({
+				TABLE: 'COLUMNS',
+				COLUMN_NAME: 'COLUMN_NAME',
+				COLUMN_POSITION: 2,
+				DATATYPE: 'TEXT'
+			});
+			data.push({
+				TABLE: 'COLUMNS',
+				COLUMN_NAME: 'COLUMN_POSITION',
+				COLUMN_POSITION: 3,
+				DATATYPE: 'INTEGER'
+			});
+			data.push({
+				TABLE: 'COLUMNS',
+				COLUMN_NAME: 'DATATYPE',
+				COLUMN_POSITION: 4,
+				DATATYPE: 'TEXT'
+			});
+			for(var t in tables) {
+				for(var i = 0; i < tables[t].schema.length; i++) {
+					data.push({
+						TABLE: t,
+						COLUMN_NAME: tables[t].schema[i].id,
+						COLUMN_POSITION: i+1,
+						DATATYPE: tables[t].schema[i].type
+					});
+				}
+			}
+			return new multiTuple(data, [['TABLE', 'TEXT'], ['COLUMN_NAME', 'TEXT'], ['COLUMN_POSITION', 'INTEGER'], ['DATATYPE', 'TEXT']]);
+		}
+		// a normal table
 		var tablename = convertStringForAttribute(identifier, tables);
 		if(tablename) {
 			return new tableIterator(tables[tablename]);
@@ -662,6 +680,34 @@ function SQLinMemory() {
 			if(count == 0) {
 				count++;
 				return value;
+			}
+		};
+		this.getSchema = function() {
+			return schema;
+		};
+	};
+	/**
+	Multiple tuple select (m row, n cols)
+	@private
+	@constructor
+	@param values tuples
+	@param schema schema of the tuple
+	*/
+	function multiTuple(values, schema) {
+		Cursor.call(this);
+
+		var count = 0;
+		this.reset = function(newvals) {
+			count = 0;
+			if(newvals) {
+				values = newvals;
+			}
+		};
+		this.close = function() {
+		};
+		this.fetch = function() {
+			if(count < values.length) {
+				return values[count++];
 			}
 		};
 		this.getSchema = function() {

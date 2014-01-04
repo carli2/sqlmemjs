@@ -15,9 +15,11 @@ db.query("SELECT 'Monikas Imbiss' UNION SELECT 'abc123'").assert([{col1: 'Monika
 db.query("SELECT 'Monika\\'s Imbiss'").assert([{col1: 'Monika\'s Imbiss'}]);
 db.query("CREATE TABLE IF NOT EXISTS person(ID integer PRIMARY KEY AUTO_INCREMENT, Name string COMMENT 'Name of the Person', Age NUMBER DEFAULT 18)").assert([{VALUE: 'person'}]);
 db.query("CREATE TABLE IF NOT EXISTS person(ID integer PRIMARY KEY AUTO_INCREMENT, Name string COMMENT 'Name of the Person', Age NUMBER DEFAULT 18)").printTable();
+db.query("DESC person").printTable();
 db.query("SELECT * FROM tables").printTable();
 db.query("SELECT tables.* FROM tables").printTable();
 db.query("SHOW TABLES").printTable();
+db.query("DESCRIBE TABLES").printTable();
 db.query("SELECT * FROM tables as t1, tables as `t2`").printTable();
 db.query("INSERT INTO person(Name, age) VALUES (?, 15), (?, 88)", "Hans", "Anton").printTable();
 db.query("INSERT INTO person(Name, AGE) VALUES (?, ?)", 'Paul', 55).printTable();

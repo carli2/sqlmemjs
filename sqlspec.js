@@ -15,6 +15,8 @@ var grammar = {
 		["[Cc][Rr][Ee][Aa][Tt][Ee]\\b", "return 'CREATE';"],
 		["[Dd][Rr][Oo][Pp]\\b", "return 'DROP';"],
 		["[Tt][Aa][Bb][Ll][Ee]\\b", "return 'TABLE';"],
+		["[Dd][Ee][Ss][Cc][Rr][Ii][Bb][Ee]\\b", "return 'DESCRIBE';"],
+		["[Ee][Xx][Pp][Ll][Aa][Ii][Nn]\\b", "return 'DESCRIBE';"],
 		// TODO: view
 		// TODO: index
 		["[Ii][Ff]\\s+[Nn][Oo][Tt]\\s+[Ee][Xx][Ii][Ss][Tt][Ss]\\b", "return 'IFNOTEXISTS';"],
@@ -81,6 +83,7 @@ var grammar = {
 		"cmd": [
 			["select", "$$ = $1;"],
 			["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']};"],
+			["describe", "$$ = $1;"],
 			["createtable", "$$ = $1;"],
 			["droptable", "$$ = $1;"],
 			["insert", "$$ = $1;"],
@@ -142,6 +145,9 @@ var grammar = {
 
 		"table": [["IDENTIFIER AS IDENTIFIER", "$$ = {id: $3, tab: $1};"], ["IDENTIFIER", "$$ = {id: $1, tab: $1}; $$[$1] = $1;"], ["( select )", "$$ = {id: 'inner_table', tab: $2};"], ["( select ) AS IDENTIFIER", "$$ = {id: $5, tab: $2};"]],
 		"tables": [["table", "$$ = {}; $$[$1.id] = $1.tab;"], ["tables , table", "$$ = $1; $$[$3.id] = $3.tab;"]],
+
+		// misc operations
+		"describe": [["DESCRIBE IDENTIFIER", "$$ = {type: 'select', from: {'columns': 'columns'}, expr: [''], where: {cmp: '=', a: {id: 'TABLE'}, b: $2}};"], ["DESC IDENTIFIER", "$$ = {type: 'select', from: {'columns': 'columns'}, expr: [''], where: {cmp: '=', a: {id: 'TABLE'}, b: $2}};"]],
 
 		// expressions and conditions
 		"e": [
