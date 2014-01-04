@@ -5,6 +5,8 @@ SQL inMemory.js is a full SQL engine written in JavaScript.
 
 You can test it live on http://launix.de/sqlmemjs/
 
+You can also look at the documentation at http://launix.de/sqlmemjs/doc
+
 Download:
 
 - http://launix.de/sqlmemjs/sqlinmem.js
@@ -67,6 +69,8 @@ The API allows the following operations:
 - <tt>table.printTable(printLine)</tt> - prints the table in human readable form (leave printLine blank to use console.log)
 - <tt>db.exportJSON()</tt> - returns a compressed JSON object of all data stored
 - <tt>db.importJSON(json)</tt> - imports the previously exported tables and overrides existing tables
+
+For more look at the JSdoc.
 
 Supported Commands
 ------------------

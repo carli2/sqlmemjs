@@ -1,19 +1,10 @@
 var parser = require('./sqlparser').parser;
 
-/*
-
-Interface Cursor:
- Constructor - has to initialize the first walkthrough
- function reset() - restart walking through the data.
- function fetch() - return object containing the data of the next row. return undefined or null if no rows left
- function close() - shut down all observers and close all sub-cursors
- function getSchema() - return an array of fields of the form [identifier, type]
-A storage backend has to implement that interface. Also all relational operations like selections, projections, cross-joins, index-joins, groups are cursors.
-
-
+/**
+SQLinMemory is a in memory SQL compatible database. It allows executing SQL queries on
+relational data.
+@constructor
 */
-
-
 function SQLinMemory() {
 	var self = this;
 
@@ -34,13 +25,18 @@ function SQLinMemory() {
 		return datatypes[type];
 	};
 
-	/*
+	/**
 	Data structure holding all tables
+	@private
 	*/
 	var tables = {};
 
-	/*
+	/**
 	A Table consists of a schema, data and indices
+	@private
+	@constructor
+	@param {string} id identifier of the table
+	@param schema schema of the table
 	*/
 	function Table(id, schema) {
 		tables[id] = this;
@@ -67,8 +63,10 @@ function SQLinMemory() {
 		this.cursors = [];
 
 
-		/*
+		/**
 		INSERT a tuple into the table
+		@private
+		@param {Object} tuple JS object that contains the data
 		*/
 		this.insertTuple = function(tuple) {
 			var last_insert;
@@ -110,16 +108,48 @@ function SQLinMemory() {
 		// TODO: also move update and delete here in order to maintain transactions
 	};
 
-	/*
-	Template for all cursors
+	/**
+	Template for all cursors.
+	A cursor may be a table cursor, a indexed table cursor or
+	the result of a query.
+	A cursor has to initialize itself to be ready for the first walkthrough.
+	Providing a new storage backend to SQLinMemory.js is easy as you just have
+	to provide cursors to walk through tables (or walk through indices)
+	and all queries can be executed by composing walkthroughs on the data.
+	@constructor
 	*/
 	function Cursor() {
-		this.reset =
-		this.fetch =
-		this.close =
-		function() {};
+		/**
+		Restart walking through the data.
+		This function should reinizialize the cursor as if you were
+		creating the cursor again. This should also work after closing
+		the cursor and should not leak memory when not all data was fetched.
+		*/
+		this.reset = function() {};
+		/**
+		Fetch one row of the table. After the last row is fetched,
+		<tt>undefined</tt> should be returned. All observers should be
+		closed after <tt>undefined</tt> was returned. No call to close()
+		is necessary then.
+		@return JS object containing the values. Keys are named like described by getSchema().
+		*/
+		this.fetch = function() {};
+		/**
+		Closes the cursor. Calling close() ensures that no memory is leaked.
+		The only valid operation after close() is reset() and getSchema().
+		*/
+		this.close = function() {};
+		/**
+		Returns the data schema of the table contained in the cursor.
+		@return JS array containing values of the form [identifier, type]
+		*/
 		this.getSchema = function() {return [];}
 		
+		/**
+		Fetches all tuples and returns an array of tuples.
+		This function walks through the table and closes it.
+		@return JS array of JS objects
+		*/
 		this.toArray = function() {
 			var result = [];
 			var tuple;
@@ -129,6 +159,11 @@ function SQLinMemory() {
 			return result;
 		};
 
+		/**
+		Prints the table in a human readable form.
+		This function walks through the table and closes it.
+		@param print Printline function, defaults to <tt>console.log</tt>
+		*/
 		this.printTable = function(print) {
 			print = print || console.log;
 			var schema = this.getSchema();
@@ -149,6 +184,13 @@ function SQLinMemory() {
 			print('');
 		};
 
+		/**
+		Asserts that the table behind has the asserted data.
+		If that is not the case, a error message is printed.
+		Use this function to provide test cases.
+		This function walks through the table and closes it.
+		@param target expected value that is compared against the result of toArray()
+		*/
 		this.assert = function(target) {
 			var source = this.toArray();
 			function print() {
@@ -173,10 +215,14 @@ function SQLinMemory() {
 			return true;
 		};
 	};
-	/*
+	/**
 	Iterator that iterates over all tables (SHOW TABLES)
+	@private
+	@constructor
 	*/
 	function tablesIterator() {
+		Cursor.call(this);
+
 		var keys, cursor;
 		this.reset = function() {
 			keys = ['TABLES'];
@@ -205,14 +251,23 @@ function SQLinMemory() {
 			return [['IDENTIFIER', 'TEXT']];
 		};
 	};
-	tablesIterator.prototype = new Cursor();
-	/*
+	/**
 	Iterator that iterates over all tuples of one table
+	@private
+	@constructor
+	@param {Table} table table to iterate over
 	*/
 	function tableIterator(table) {
+		Cursor.call(this);
+
+		/**
+		Cursor that points to the next line to fetch.
+		The observer moves this cursor around as the
+		data changes. This guarantees cursor stability.
+		*/
 		this.cursor = 0;
 		var self = this;
-		// observer that moves the cursor with deletions
+		/** observer that moves the cursor with deletions */
 		var observer = {
 			active: false,
 			insert: function(idx) {
@@ -266,9 +321,11 @@ function SQLinMemory() {
 			return schema;
 		};
 	};
-	tableIterator.prototype = new Cursor();
-	/*
-	Find element of object and return attribute name with correct case
+	/**
+	Find element of object and return attribute name with correct case.
+	@private
+	@param {string} str string to find in obj, case insensitive
+	@param {Object} obj associative array
 	*/
 	function convertStringForAttribute(str, obj) {
 		if(obj.hasOwnProperty(str)) return str;
@@ -278,8 +335,10 @@ function SQLinMemory() {
 				return i;
 		}
 	};
-	/*
+	/**
 	Get the iterator for a table name
+	@private
+	@param {string} identifier case insensitive identifier of the table
 	*/
 	function getTableIterator(identifier) {
 		if(identifier.toUpperCase() == 'TABLES')
@@ -289,18 +348,18 @@ function SQLinMemory() {
 			return new tableIterator(tables[tablename]);
 		}
 	};
-	/*
+	/**
 	Create condition out of expression
-	@param id identifier of the row
+	@private
 	@param code parsed JSON values of the condition
 	@param schema schema of the input tuple for that expression
 	@param args wildcard arguments
-	@return {id: string, type: string, fn: function(tuples: JSON)=>value} compiled function
+	@return <tt>function(tuple: JSON)=>boolean</tt> compiled function
 	*/
-	function createCondition(id, code, schema, args) {
+	function createCondition(code, schema, args) {
 		if(code.op) {
-			var a = code.a !== undefined ? createCondition('', code.a, schema, args) : undefined;
-			var b = code.b !== undefined ? createCondition('', code.b, schema, args) : undefined;
+			var a = code.a !== undefined ? createCondition(code.a, schema, args) : undefined;
+			var b = code.b !== undefined ? createCondition(code.b, schema, args) : undefined;
 			switch(code.op) {
 				case 'and':
 				return function(tuples) {
@@ -371,13 +430,14 @@ function SQLinMemory() {
 		// Default
 		return function(t){return true;};
 	}
-	/*
+	/**
 	Create function out of expression
-	@param id identifier of the row
+	@private
+	@param {string} id identifier of the row
 	@param code parsed JSON values of the expression
 	@param schema schema of the input tuple for that expression
 	@param args wildcard arguments
-	@return {id: string, type: string, fn: function(tuples: JSON)=>value} compiled function
+	@return object <tt>id: string, type: string, fn: function(tuple: JSON)=>value</tt> compiled function
 	*/
 	function createFunction(id, code, schema, args) {
 		if(typeof code == 'object') {
@@ -553,12 +613,16 @@ function SQLinMemory() {
 			fn: function(t){return 1;}
 		};
 	}
-	/*
+	/**
 	Single value select (1 row, 1 col)
+	@private
+	@constructor
 	@param value value to return
-	@param type type of that one value
+	@param {string} type type of that one value
 	*/
 	function singleValue(value, type) {
+		Cursor.call(this);
+
 		var count = 0;
 		this.reset = function() {
 			count = 0;
@@ -575,13 +639,16 @@ function SQLinMemory() {
 			return [['VALUE', type]];
 		};
 	};
-	singleValue.prototype = new Cursor();
-	/*
+	/**
 	Single tuple select (1 row, n cols)
+	@private
+	@constructor
 	@param value tuple
 	@param schema schema of the tuple
 	*/
 	function singleTuple(value, schema) {
+		Cursor.call(this);
+
 		var count = 0;
 		this.reset = function(newval) {
 			count = 0;
@@ -601,11 +668,16 @@ function SQLinMemory() {
 			return schema;
 		};
 	};
-	singleTuple.prototype = new Cursor();
-	/*
+	/**
 	Traditional cross join
+	@private
+	@constructor
+	@param {Cursor} a first table to cross join
+	@param {Cursor} b second table to cross join
 	*/
 	function crossJoin(a, b) {
+		Cursor.call(this);
+
 		var t1 = a, t2 = b;
 		var leftTuple = t1.fetch();
 		this.reset = function() {
@@ -647,11 +719,16 @@ function SQLinMemory() {
 			return tuple;
 		};
 	};
-	crossJoin.prototype = new Cursor();
-	/*
+	/**
 	Union of two iterators
+	@private
+	@constructor
+	@param {Cursor} a first table to output
+	@param {Cursor} b second table to output
 	*/
 	function Union(a, b) {
+		Cursor.call(this);
+
 		(function(){
 			// validate schema
 			var sa = a.getSchema();
@@ -680,9 +757,16 @@ function SQLinMemory() {
 			return a.fetch() || b.fetch();
 		};
 	};
-	Union.prototype = new Cursor();
-	// add name to a tables identifiers
+	/**
+	Add name to a tables identifiers
+	@private
+	@constructor
+	@param {Cursor} table table to rename
+	@param {string} prefix prefix to give to all tables attributes (a turns to prefix.a)
+	*/
 	function renameSchema(table, prefix) {
+		Cursor.call(this);
+
 		var t = table, p = prefix;
 		this.reset = function() {
 			t.reset();
@@ -706,14 +790,17 @@ function SQLinMemory() {
 			return ntuple;
 		};
 	};
-	renameSchema.prototype = new Cursor();
-	/*
+	/**
 	Map: convert a tuple with a function
-	@param table table to iterate over
+	@private
+	@constructor
+	@param {Cursor} table table to iterate over
 	@param schema resulting schema
 	@param fn function that converts input tuple into output tuple
 	*/
 	function Map(table, schema, fn) {
+		Cursor.call(this);
+
 		this.reset = function() {
 			table.reset();
 		};
@@ -728,13 +815,16 @@ function SQLinMemory() {
 			if(tuple) return fn(tuple);
 		};
 	};
-	Map.prototype = new Cursor();
-	/*
+	/**
 	Filter: only pass accepting tuples
-	@param table table to filter
+	@private
+	@constructor
+	@param {Cursor} table table to filter
 	@param fn function that should return wether a tuple is accepted
 	*/
 	function Filter(table, fn) {
+		Cursor.call(this);
+
 		this.reset = function() {
 			table.reset();
 		};
@@ -759,13 +849,16 @@ function SQLinMemory() {
 			}
 		};
 	};
-	Filter.prototype = new Cursor();
-	/*
+	/**
 	Limiter: do not allow more than n elements
-	@param table table to filter
-	@param n max number of rows to fetch
+	@private
+	@constructor
+	@param {Cursor} table table to filter
+	@param {number} n max number of rows to fetch
 	*/
 	function Limiter(table, n) {
+		Cursor.call(this);
+
 		var nleft = n;
 		this.reset = function() {
 			table.reset();
@@ -789,13 +882,16 @@ function SQLinMemory() {
 			}
 		};
 	};
-	Limiter.prototype = new Cursor();
-	/*
+	/**
 	Skipper: Skip n entries before returning anything
-	@param table table to filter
-	@param n number of rows to skip
+	@private
+	@constructor
+	@param {Cursor} table table to filter
+	@param {number} n number of rows to skip
 	*/
 	function Skipper(table, n) {
+		Cursor.call(this);
+
 		for(var i = 0; i < n; i++) {
 			// throw away n rows
 			table.fetch();
@@ -817,26 +913,33 @@ function SQLinMemory() {
 			return table.fetch();
 		};
 	};
-	Skipper.prototype = new Cursor();
-	/*
+	/**
 	Sorter: Sort all entries. For sorting, all entries have to be fetched.
-	@param table table to sort
+	@private
+	@constructor
+	@param {cursor} table table to sort
 	@param sortfn sort criteria
 	*/
 	function Sorter(table, sortfn) {
-		var data = [], tuple, cursor = 0;
-		// at first, fetch all data
-		while(tuple = table.fetch()) {
-			data.push(tuple);
-		}
-		// sort everything
-		data.sort(sortfn);
+		Cursor.call(this);
+
+		var data, cursor;
 		this.reset = function() {
-			// no reset; always stay with old data
 			cursor = 0;
+			data = [];
+			// at first, fetch all data
+			table.reset();
+			var tuple;
+			while(tuple = table.fetch()) {
+				data.push(tuple);
+			}
+			// sort everything
+			data.sort(sortfn);
 		};
+		this.reset();
 		this.close = function() {
-			// no need to close since we fetched everything
+			// free the data (setting to null is faster than deleting)
+			data = null;
 		};
 		this.getSchema = function() {
 			return table.getSchema();
@@ -848,15 +951,21 @@ function SQLinMemory() {
 			}
 		};
 	};
-	Sorter.prototype = new Cursor();
-	/*
+	/**
 	Prepare statement (this saves parsing time. maybe in future prepare clonable iterators)
+	@param {string} sql SQL string to parse
+	@return {Object} data structure that can be passed to query()
+	@see query
 	*/
 	this.prepare = function(sql, scope) {
 		scope = scope || {index: 1};
 		// parse the query
 		var query = parser.parse(sql);
-		// enumerate all ?'s
+		/**
+		enumerate all ?'s in a query starting with 1
+		@private
+		@param query query object to walk through
+		*/
 		function walkThrough(query) {
 			if(typeof query !== 'object') return;
 			if(query.wildcard === true) {
@@ -914,8 +1023,12 @@ function SQLinMemory() {
 		walkThrough(query);
 		return query;
 	};
-	/*
+	/**
 	Main query method
+	@param {string|Object} sql SQL string or prepared statement
+	@param schema arguments for the <tt>?</tt> values. Use as many arguments as you want.
+	@return {Cursor} Cursor that contains the results. Additionaly on insert last_insert is set and on update and delete num_rows is set.
+	@see Cursor
 	*/
 	this.query = function(sql, schema) {
 		var args;
@@ -1013,7 +1126,7 @@ function SQLinMemory() {
 			}
 			// WHERE-Filter (and find index checks)
 			if(query.where) {
-				from = new Filter(from, createCondition(from, query.where, from.getSchema(), args));
+				from = new Filter(from, createCondition(query.where, from.getSchema(), args));
 			}
 			// SELECT XYZ-Mapping
 			var table = new Map(from, schema, function(inp) {
@@ -1178,7 +1291,7 @@ function SQLinMemory() {
 			}
 			if(query.where) {
 				// Filter tuples by WHERE-Condition
-				iterator = new Filter(iterator, createCondition(iterator, query.where, iterator.getSchema(), args));
+				iterator = new Filter(iterator, createCondition(query.where, iterator.getSchema(), args));
 			}
 			var tuple, count = 0;
 			// now update all tuples
@@ -1207,7 +1320,7 @@ function SQLinMemory() {
 			var iterator = tablei;
 			if(query.where) {
 				// Filter tuples by WHERE-Condition
-				iterator = new Filter(iterator, createCondition(iterator, query.where, iterator.getSchema(), args));
+				iterator = new Filter(iterator, createCondition(query.where, iterator.getSchema(), args));
 			}
 			var tuple, count = 0;
 			// now remove all tuples that we find
@@ -1228,6 +1341,11 @@ function SQLinMemory() {
 		})();
 		throw "unknown command: " + JSON.stringify(query);
 	};
+	/**
+	Exports all tables as a JSON object
+	@return JSON object containing all tables.
+	@see importJSON
+	*/
 	this.exportJSON = function() {
 		var result = {};
 		for(var t in tables) {
@@ -1238,6 +1356,12 @@ function SQLinMemory() {
 		}
 		return result;
 	};
+	/**
+	Imports a exported JSON object into the table.
+	Existing tables are overwritten.
+	@param json JSON object generated by exportJSON()
+	@see exportJSON
+	*/
 	this.importJSON = function(json) {
 		for(var t in json) {
 			var table = new Table(t, json[t].schema);
