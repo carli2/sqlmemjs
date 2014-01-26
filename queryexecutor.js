@@ -1051,6 +1051,12 @@ function SQLinMemory() {
 				}
 				walkThrough(query.from);
 				walkThrough(query.where);
+				if(query.group) {
+					for(var i = 0; i < query.group.length; i++) {
+						walkThrough(query.group[i]);
+					}
+				}
+				walkThrough(query.having);
 				if(query.order) {
 					for(var i = 0; i < query.order.length; i++) {
 						walkThrough(query.order[i].e);

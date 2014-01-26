@@ -49,3 +49,9 @@ db.query("SELECT * FROM `person` LIMIT 3, 100").printTable();
 db.query("SELECT * FROM `person` ORDER BY Age").printTable();
 db.query("SELECT * FROM `person` ORDER BY Age DESC").printTable();
 db.query("SELECT * FROM `person` ORDER BY Name, Age").printTable();
+
+db.query("CREATE TABLE sums(category integer, value number)");
+db.query("INSERT INTO SUMS(category, value) VALUES(1, 1), (2,5),(1,9),(3,10)");
+db.query("SELECT * FROM `sums`").printTable();
+db.query("SELECT category, SUM(value) FROM `sums` GROUP BY category").printTable();
+db.query("SELECT category, SUM(value) AS SUMME FROM `sums` GROUP BY category HAVING SUMME > 7").printTable();

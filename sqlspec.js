@@ -33,8 +33,8 @@ var grammar = {
 		["[Ss][Ee][Tt]\\b", "return 'SET';"],
 		["[Dd][Ee][Ll][Ee][Tt][Ee]\\b", "return 'DELETE';"],
 		["[Ww][Hh][Ee][Rr][Ee]\\b", "return 'WHERE';"],
-		// TODO: GROUP BY
-		// TODO: HAVING
+		["[Gg][Rr][Oo][Uu][Pp]\\s+[Bb][Yy]\\b", "return 'GROUPBY';"],
+		["[Hh][Aa][Vv][Ii][Nn][Gg]\\b", "return 'HAVING';"],
 		["[Oo][Rr][Dd][Ee][Rr]\\s+[Bb][Yy]\\b", "return 'ORDERBY';"],
 		["[Aa][Ss][Cc]\\b", "return 'ASC';"],
 		["[Dd][Ee][Ss][Cc]\\b", "return 'DESC';"],
@@ -131,8 +131,8 @@ var grammar = {
 		"select1": [["SELECT cols", "$$ = {type: 'select', expr: $2};"]],
 		"select2": [["select1", "$$ = $1;"], ["select1 FROM tables", "$$ = $1; $$.from = $3;"]],
 		"select3": [["select2", "$$ = $1;"], ["select2 WHERE c", "$$ = $1; $$.where = $3;"]],
-		"select4": [["select3", "$$ = $1;"]], // TODO: GROUP BY
-		"select5": [["select4", "$$ = $1;"]], // TODO: HAVING
+		"select4": [["select3", "$$ = $1;"], ["select3 GROUPBY elist", "$$ = $1; $$.group = $3;"]],
+		"select5": [["select4", "$$ = $1;"], ["select4 HAVING c", "$$ = $1; $$.having = $3;"]],
 		"select6": [["select5", "$$ = $1;"], ["select5 ORDERBY ordercols", "$$ = $1; $$.order = $3;"]],
 		"select7": [["select6", "$$ = $1;"], ["select6 LIMIT e", "$$ = $1; $$.maxcount = $3;"], ["select6 LIMIT e , e", "$$ = $1; $$.maxcount = $3; $$.startcount = $5;"]],
 		"select": [["select7", "$$ = $1;"], ["select UNION select", "$$ = {type: 'union', a: $1, b: $3};"]],
