@@ -96,6 +96,7 @@ Supported Commands
 - SELECT * FROM table LIMIT 5
 - SELECT * FROM table LIMIT 5, 15
 - SELECT * FROM table ORDER BY value [DESC|ASC]
+- SELECT SUM(value), COUNT(value) as cnt FROM table HAVING cnt > 3
 
 Supported Data Types
 --------------------
