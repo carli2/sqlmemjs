@@ -643,7 +643,88 @@ function SQLinMemory() {
 			type: 'INTEGER',
 			fn: function(t){return 1;}
 		};
-	}
+	};
+	/**
+	 * Map of all aggregations. Create a aggregation by calling the function.
+	 * The function returns a function which you can call for additional values.
+	 * The function also has a method getValue which returns the result.
+	 * */
+	var aggregates = {
+		SUM: function(value) {
+			var sum = value;
+			var x = function(value) {
+				sum += value;
+			}
+			x.getValue = function() {
+				return sum;
+			}
+			return x;
+		},
+		COUNT: function(value) {
+			var count = 1;
+			var x = function(value) {
+				count++;
+			}
+			x.getValue = function() {
+				return count;
+			}
+			return x;
+		},
+		AVG: function(value) {
+			var count = 1, sum = value;
+			var x = function(value) {
+				count++;
+				sum += value;
+			}
+			x.getValue = function() {
+				return sum/count;
+			}
+			return x;
+		},
+		MAX: function(value) {
+			var val = value;
+			var x = function(value) {
+				if(value > val) {
+					val = value;
+				}
+			}
+			x.getValue = function() {
+				return val;
+			}
+			return x;
+		},
+		MIN: function(value) {
+			var val = value;
+			var x = function(value) {
+				if(value < val) {
+					val = value;
+				}
+			}
+			x.getValue = function() {
+				return val;
+			}
+			return x;
+		},
+		FIRST: function(value) {
+			var val = value;
+			var x = function(value) {
+			}
+			x.getValue = function() {
+				return val;
+			}
+			return x;
+		},
+		LAST: function(value) {
+			var val = value;
+			var x = function(value) {
+				val = value;
+			}
+			x.getValue = function() {
+				return val;
+			}
+			return x;
+		}
+	};
 	/**
 	Single value select (1 row, 1 col)
 	@private
@@ -905,6 +986,72 @@ function SQLinMemory() {
 					return tuple;
 				}
 				// fetch next element
+			}
+		};
+	};
+	/**
+	Group: group items according to a aggregate function
+	@private
+	@constructor
+	@param {Cursor} table table to filter
+	@param aggr aggregates (map from column name to aggregate function)
+	*/
+	function Group(table, aggr, getKey) {
+		Cursor.call(this);
+
+		// criteria for grouping
+		getKey = getKey || function (inp) {
+			return 'x';
+		}
+
+		var data, cursor;
+		this.reset = function() {
+			cursor = 0;
+			data = [];
+			// at first, fetch all data
+			table.reset();
+
+			// prepare data
+			var tuple, result = {};
+			// walk through data
+			while(tuple = table.fetch()) {
+				var key = getKey(tuple), fns;
+				if(!result[key]) {
+					// prepare first run element of aggregation
+					fns = {};
+					for(var i in aggr) {
+						fns[i] = aggregates[aggr[i]](tuple[i]);
+					}
+					result[key] = fns;
+				} else {
+					// second run
+					fns = result[key];
+					for(var i in fns) {
+						fns[i](tuple[i]);
+					}
+				}
+			}
+			// extract data from aggregate functions
+			for(var i in result) {
+				var x = result[i];
+				for(var j in x) {
+					x[j] = x[j].getValue();
+				}
+				data.push(x);
+			}
+		};
+		this.reset();
+		this.close = function() {
+			// free the data (setting to null is faster than deleting)
+			data = null;
+		};
+		this.getSchema = function() {
+			return table.getSchema();
+		};
+		this.fetch = function() {
+			// just fetch the next prepared row
+			if(cursor < data.length) {
+				return data[cursor++];
 			}
 		};
 	};
@@ -1174,10 +1321,57 @@ function SQLinMemory() {
 					cols.push(query.expr[i]);
 				}
 			}
+
+			// helper functions: groupby-prepare (split expression into collection and after-aggregate part)
+			var tmpcounter = 0, hasAnyAggregates = query.group?true:false;
+			var inner = {}, innerAggregate = {}, innerschema = [];
+			function splitFunction(fn, name) {
+				var hasAggr = false;
+				function findAggregates(fn) {
+					if(typeof fn !== 'object') {
+						return fn;
+					}
+					if(fn.id) {
+						// export identifiers
+						if(!inner[fn.id]) {
+							inner[fn.id] = fn;
+							innerAggregate[fn.id] = 'FIRST';
+						}
+					}
+					if(fn.call && aggregates.hasOwnProperty(fn.call.toUpperCase()) && fn.args.length === 1) {
+						// contains aggregate
+						hasAggr = true;
+						hasAnyAggregates = true;
+						var newname = 'tmp'+(tmpcounter++); // new temporary name of the value to collect
+						inner[newname] = fn.args[0];
+						innerAggregate[newname] =fn.call.toUpperCase();
+						return {id: newname}; // outer: read value from aggregates
+					} else {
+						// copy attributes
+						var result = {};
+						for(var f in fn) {
+							// copy all attributes transformed
+							result[f] = findAggregates(fn[f]);
+						}
+						return result;
+					}
+				}
+				var outer = findAggregates(fn);
+				if(!hasAggr) {
+					// insert the FIRST aggregate
+					inner[name] = outer;
+					innerAggregate[name] = 'FIRST';
+					return {id: name};
+				} else {
+					return outer;
+				}
+			}
+
 			var newtuple = {}, schema = [];
 			// compile calculations
 			for(var i = 0; i < cols.length; i++) {
-				if(cols[i][0] == '-') {
+				// give names to all columns
+				if(cols[i][0] === '-') {
 					// unnamed column
 					if(typeof cols[i][1] == 'object' && cols[i][1].id) {
 						cols[i][0] = cols[i][1].id;
@@ -1185,13 +1379,72 @@ function SQLinMemory() {
 						cols[i][0] = 'col'+String(i+1);
 					}
 				}
-				var f = createFunction(cols[i][0], cols[i][1], from.getSchema(), args);
+				// try to split the function from their aggregates
+				newtuple[cols[i][0]] = splitFunction(cols[i][1], cols[i][0]);
+			}
+			// compile inner functions of aggregate
+			if(hasAnyAggregates) {
+				for(var i in inner) {
+					var f = createFunction(i, inner[i], from.getSchema(), args);
+					inner[f.id] = f.fn;
+					innerschema.push([f.id, f.type]);
+				}
+			}
+			// compile outer functions of aggregate
+			for(var i = 0; i < cols.length; i++) {
+				var f;
+				if(hasAnyAggregates) {
+					// expression split into two parts
+					f = createFunction(cols[i][0], newtuple[cols[i][0]], innerschema, args);
+				} else {
+					// single expression
+					f = createFunction(cols[i][0], cols[i][1], from.getSchema(), args);
+				}
 				newtuple[f.id] = f.fn;
 				schema.push([f.id, f.type]);
 			}
-			// WHERE-Filter (and find index checks)
+			// compile group function
+			var groupFn;
+			if(query.group) {
+				groupFn = [];
+				for(var i = 0; i < query.group.length; i++) {
+					groupFn.push(createFunction('', query.group[i], innerschema, args).fn);
+				}
+			}
+
+			// WHERE-Filter (evaluating the input)
 			if(query.where) {
 				from = new Filter(from, createCondition(query.where, from.getSchema(), args));
+			}
+
+			// do we have aggregates?
+			if(hasAnyAggregates) {
+				// GROUP BY / Aggregates
+				// first calculate inner part of the aggregates and the passthrough IDs
+				from = new Map(from, innerschema, function(inp) {
+					var outp = {};
+					// iterate over all cols
+					for(var i in inner) {
+						outp[i] = inner[i](inp);
+					}
+					return outp;
+				});
+				// then group the items and calculate the aggregates
+				from = new Group(from, innerAggregate, function(inp) {
+					// key for the grouping
+					if(groupFn) {
+						// build a key to group
+						var result = '';
+						for(var i = 0; i < groupFn.length; i++) {
+							// hacky but no one would use that string in a database
+							result += '||;|<-' + groupFn[i](inp);
+						}
+						return result;
+					} else {
+						// group all together
+						return 'x';
+					}
+				});
 			}
 			// SELECT XYZ-Mapping
 			var table = new Map(from, schema, function(inp) {
@@ -1202,8 +1455,11 @@ function SQLinMemory() {
 				}
 				return outp;
 			});
-			// TODO: Group by
-			// TODO: Having
+
+			// HAVING-Filter (evaluating the output)
+			if(query.having) {
+				table = new Filter(table, createCondition(query.having, table.getSchema(), args));
+			}
 			// ORDER BY
 			if(query.order) {
 				var schema = table.getSchema();
@@ -1237,7 +1493,6 @@ function SQLinMemory() {
 			}
 			return table;
 		})(); else if(query.type == 'union') return (function(){
-			// TODO: handle arguments
 			var a = self.query(query.a);
 			var b = self.query(query.b);
 			return new Union(a, b);
