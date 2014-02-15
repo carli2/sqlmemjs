@@ -13,6 +13,7 @@ function SQLinMemory() {
 		'NUMBER': 'NUMBER',
 		'FLOAT': 'NUMBER',
 		'DOUBLE': 'NUMBER',
+		'REAL': 'NUMBER',
 		'TEXT': 'TEXT',
 		'STRING': 'TEXT',
 		'DATE': 'DATE'
