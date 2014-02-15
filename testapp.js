@@ -4,6 +4,9 @@ var SQLinMemory = sql.SQLinMemory;
 var db = new SQLinMemory();
 
 db.query('SELECT 1+2').assert([{col1: 3}]);
+db.query('SELECT 1+2 -- this is a comment').assert([{col1: 3}]);
+db.query('SELECT 1--this is a comment\n+2 -- this is a comment').assert([{col1: 3}]);
+db.query('SELECT 1+2; something').assert([{col1: 3}]);
 db.query('SELECT 1+2, 3').assert([{col1: 3, col2: 3}]);
 db.query('SELECT 1+2 AS sum').assert([{sum: 3}]);
 db.query('SELECT 2+2*2 as sum').assert([{sum: 6}]);
@@ -57,3 +60,15 @@ db.query("SELECT * FROM `sums`").printTable();
 db.query("SELECT SUM(value), MIN(value), MAX(value) FROM `sums`").printTable();
 db.query("SELECT category, SUM(value), COUNT(value), AVG(value) FROM `sums` GROUP BY category").printTable();
 db.query("SELECT category, SUM(value) AS SUMME FROM `sums` GROUP BY category HAVING SUMME > 7").printTable();
+
+// interactive SQL shell
+console.log('testing interactive SQL shell');
+var shell = db.openShell(function(cursor) {
+	cursor.printTable();
+});
+shell.write("-- starting\n");
+shell.write("SEL");
+shell.write("ECT 1;");
+shell.write("/* such things occur in mysql dumps */;\n");
+shell.write("SELECT 2;SELECT 3");
+shell.close();

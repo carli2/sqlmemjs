@@ -12,10 +12,10 @@ Download:
 - http://launix.de/sqlmemjs/sqlinmem.js
 - http://launix.de/sqlmemjs/sqlinmem.min.js
 
-Funding it
-----------
+Donating
+--------
 
-Please help this project by either funding http://www.indiegogo.com/projects/sql-inmemory-js/ or use the donate button under http://launix.de/donate.html
+Please help this project by using the donate button under http://launix.de/donate.html
 
 Planned features
 ----------------
@@ -54,6 +54,15 @@ var getX = db.prepare("SELECT * FROM x where id=?");
 var carl = db.query(getX, id);
 console.log(JSON.stringify(carl.fetch()));
 carl.close();
+
+// interactive shell that takes semicolon separated queries
+var shell = db.openShell(function(cursor) {
+	cursor.printTable();
+});
+shell.write("SEL");
+shell.write("ECT 1;");
+shell.write("SELECT 2;SELECT 3");
+shell.close();
 ```
 
 The API allows the following operations:
