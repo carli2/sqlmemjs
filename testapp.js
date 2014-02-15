@@ -4,6 +4,7 @@ var SQLinMemory = sql.SQLinMemory;
 var db = new SQLinMemory();
 
 db.query('SELECT 1+2').assert([{col1: 3}]);
+db.query('SELECT 1+2, 3').assert([{col1: 3, col2: 3}]);
 db.query('SELECT 1+2 AS sum').assert([{sum: 3}]);
 db.query('SELECT 2+2*2 as sum').assert([{sum: 6}]);
 db.query('SELECT -1*3 as a, 3/4 as b').assert([{a: -1*3, b: 3/4}]);
@@ -53,5 +54,6 @@ db.query("SELECT * FROM `person` ORDER BY Name, Age").printTable();
 db.query("CREATE TABLE sums(category integer, value number)");
 db.query("INSERT INTO SUMS(category, value) VALUES(1, 1), (2,5),(1,9),(3,10)");
 db.query("SELECT * FROM `sums`").printTable();
-db.query("SELECT category, SUM(value) FROM `sums` GROUP BY category").printTable();
+db.query("SELECT SUM(value), MIN(value), MAX(value) FROM `sums`").printTable();
+db.query("SELECT category, SUM(value), COUNT(value), AVG(value) FROM `sums` GROUP BY category").printTable();
 db.query("SELECT category, SUM(value) AS SUMME FROM `sums` GROUP BY category HAVING SUMME > 7").printTable();
