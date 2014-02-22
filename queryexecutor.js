@@ -13,6 +13,7 @@ function SQLinMemory() {
 		'NUMBER': 'NUMBER',
 		'FLOAT': 'NUMBER',
 		'DOUBLE': 'NUMBER',
+		'REAL': 'NUMBER',
 		'TEXT': 'TEXT',
 		'STRING': 'TEXT',
 		'DATE': 'DATE'
@@ -1689,6 +1690,41 @@ function SQLinMemory() {
 			var table = new Table(t, json[t].schema);
 			table.data = json[t].data;
 		}
+	};
+	/**
+	Opens a interactive shell
+	@param callback function that gets a cursor of a query
+	@return Object with function write(string) which takes input
+	        line by line and calls the callback when a full
+		sql query is entered. Function close throws the
+		last error
+	*/
+	this.openShell = function(callback) {
+		var rest = '', that = this;
+		return {
+			write: function(s) {
+				rest += s;
+				try {
+					while(rest) {
+						var tmp = that.prepare(rest);
+						if(tmp.rest !== undefined) {
+							rest = tmp.rest;
+							callback(that.query(tmp));
+						} else {
+							throw "unfinished";
+						}
+					}
+				} catch(err) {
+					// error means input not complete
+				}
+			},
+			close: function() {
+				if(rest) {
+					callback(that.query(rest));
+					rest = '';
+				}
+			}
+		};
 	};
 }
 

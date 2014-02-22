@@ -3,7 +3,10 @@ var Parser = require('jison').Parser;
 var grammar = {
 	lex: {
 		"rules": [
-		["\\s+", "" /* skop whitespace */],
+		["\\s+", "" /* skip whitespace */],
+		["--.*?$", "" /* skip comments */],
+		["--.*?\\n", "" /* skip comments */],
+		["\\/\\*.*?\\*\\/;", "" /* skip comments */],
 		// literals
 		["[0-9]+", "return 'NUMBER';"],
 		["'(\\\\'|.)*?'", "return 'STRINGX';"],
@@ -48,6 +51,7 @@ var grammar = {
 		["[a-zA-Z][a-zA-Z_0-9]*", "return 'IDENTIFIER1';"],
 		["`.+?`", "return 'IDENTIFIER2';"],
 		// symbols
+		[";.*", "return 'DELIMITER_REST';"],
 		[",", "return ',';"],
 		["\\.", "return '.';"],
 		["\\*", "return '*';"],
@@ -79,7 +83,8 @@ var grammar = {
 	],
 	bnf: {
 		// detecting the type of command
-		"expressions":  [["cmd EOF", "return $1;"]],
+		"expressions":  [["cmd EOF", "return $1;"],
+			["cmd DELIMITER_REST EOF", "$1.rest = $2.substr(1); return $1;"]],
 		"cmd": [
 			["select", "$$ = $1;"],
 			["SHOWTABLES", "$$ = {type: 'select', from: {'table': 'tables'}, expr: ['']};"],
