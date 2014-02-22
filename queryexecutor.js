@@ -1168,6 +1168,17 @@ function SQLinMemory() {
 		scope = scope || {index: 1};
 		// parse the query
 		var query = parser.parse(sql);
+		var reads = [], writes = [];
+		query.reads = reads;
+		query.writes = writes;
+
+		if(query.type === 'createtable' || query.type === 'droptable') {
+			writes.push('TABLES');
+			writes.push('COLUMNS');
+			writes.push(query.id);
+		} else if(query.type === 'insert' || query.type === 'update' || query.type === 'delete') {
+			writes.push(query.table);
+		}
 		/**
 		enumerate all ?'s in a query starting with 1
 		@private
@@ -1198,6 +1209,14 @@ function SQLinMemory() {
 					walkThrough(query.expr[i][1]);
 				}
 				walkThrough(query.from);
+				if(query.from) {
+					for(var f in query.from) {
+						if(typeof query.from[f] === 'string') {
+							// log which pages should be watched
+							reads.push(query.from[f]);
+						}
+					}
+				}
 				walkThrough(query.where);
 				if(query.group) {
 					for(var i = 0; i < query.group.length; i++) {
