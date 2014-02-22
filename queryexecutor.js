@@ -1280,7 +1280,9 @@ function SQLinMemory() {
 							iterator = self.query(tables[t]);
 						}
 					}
-					iterator = new renameSchema(iterator, t);
+					if(t != 'inner_table') {
+						iterator = new renameSchema(iterator, t);
+					}
 					tables[t] = iterator;
 					// cross-join all FROMs
 					if(from) {

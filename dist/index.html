@@ -52,8 +52,10 @@
 	    d.innerHTML = '<h2>'+htmlentities(sql)+'</h2>' + (result);
 	    document.getElementById('json').innerText = JSON.stringify(db.exportJSON());
     }
-    evaluate("SELECT 1+2 AS sum");
-    evaluate("SELECT * FROM tables");
+    evaluate("create table abc(a double, b double, c double)");
+    evaluate("insert into abc(a, b, c) values (5, 1, 7), (1, 4, 8)");
+	evaluate("select * from abc");
+	evaluate("select a+b, c-a from abc where a < b");
     var query = document.getElementById('query');
     var querybtn = document.getElementById('querybtn');
     query.onkeypress = function(e) {

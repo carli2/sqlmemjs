@@ -143,7 +143,7 @@ var grammar = {
 		"ordercol": [["e", "$$ = {e: $1};"], ["e ASC", "$$ = {e: $1};"], ["e DESC", "$$ = {e: $1, desc: true};"]],
 		"ordercols": [["ordercol", "$$ = [$1];"], ["ordercols , ordercol", "$$ = $1; $$.push($3);"]],
 
-		"table": [["IDENTIFIER AS IDENTIFIER", "$$ = {id: $3, tab: $1};"], ["IDENTIFIER", "$$ = {id: $1, tab: $1}; $$[$1] = $1;"], ["( select )", "$$ = {id: 'inner_table', tab: $2};"], ["( select ) AS IDENTIFIER", "$$ = {id: $5, tab: $2};"]],
+		"table": [["IDENTIFIER AS IDENTIFIER", "$$ = {id: $3, tab: $1};"], ["IDENTIFIER", "$$ = {id: $1, tab: $1}; $$[$1] = $1;"], ["( select )", "throw 'inner tables must be named';"], ["( select ) AS IDENTIFIER", "$$ = {id: $5, tab: $2};"]],
 		"tables": [["table", "$$ = {}; $$[$1.id] = $1.tab;"], ["tables , table", "$$ = $1; $$[$3.id] = $3.tab;"]],
 
 		// misc operations
@@ -160,7 +160,6 @@ var grammar = {
 			["NUMBER", "$$ = Number($1);"],
 			["STRING", "$$ = $1;"],
 			["IDENTIFIER", "$$ = {id: $1};"],
-			["IDENTIFIER . IDENTIFIER", "$$ = {id: $1+'.'+$3};"],
 			["( select )", "$$ = {nest: $2};"],
 			["IDENTIFIER ( elist )", "$$ = {call: $1, args: $3};"],
 			["?", "$$ = {wildcard: true};"]
@@ -184,7 +183,8 @@ var grammar = {
 		],
 		"IDENTIFIER": [
 			["IDENTIFIER1", "$$ = $1;"],
-			["IDENTIFIER2", "$$ = $1.substring(1, $1.length-1);"]
+			["IDENTIFIER2", "$$ = $1.substring(1, $1.length-1);"],
+			["IDENTIFIER . IDENTIFIER", "$$ = $1 + '.' + $3;"]
 		],
 		"STRING": [["STRINGX", "$$ = eval(yytext)"]]
 	}
