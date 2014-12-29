@@ -1253,6 +1253,7 @@ function SQLinMemory() {
 			}
 		}
 		walkThrough(query);
+		Object.freeze(query);
 		return query;
 	};
 	/**
@@ -1535,6 +1536,7 @@ function SQLinMemory() {
 						if(validateDatatype(code.type) != validateDatatype(query.cols[i].type)) {
 							throw "incompatible data type for default value";
 						}
+						// TODO: do not change query object
 						query.cols[i].default = code.fn({});
 					}
 				}
