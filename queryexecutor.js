@@ -448,12 +448,6 @@ function SQLinMemory() {
 						return a(tuples) >= b(tuples);
 					};
 				break;
-				case 'between':
-				return function(tuples) {
-						var v = a(tuples);
-						return v >= b(tuples) && v <= c(tuples);
-					};
-				break;
 
 				default:
 				throw "Unknown opcode " + code.cmp;

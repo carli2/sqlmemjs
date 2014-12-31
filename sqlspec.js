@@ -181,7 +181,7 @@ var grammar = {
 			["e <= e", "$$ = {cmp: '<=', a: $1, b: $3};"],
 			["e > e", "$$ = {cmp: '>', a: $1, b: $3};"],
 			["e >= e", "$$ = {cmp: '>=', a: $1, b: $3};"],
-			["e BETWEEN e AND e", "$$ = {cmp: 'between', a: $1, b: $3, c: $5};"],
+			["e BETWEEN e AND e", "$$ = {op: 'and', a: {cmp: '>=', a: $1, b: $3}, b: {cmp: '<=', a: $1, b: $5}};"],
 			["c AND c", "$$ = {op: 'and', a: $1, b: $3};"],
 			["c OR c", "$$ = {op: 'or', a: $1, b: $3};"],
 			["NOT c", "$$ = {op: 'not', a: $2};"]
