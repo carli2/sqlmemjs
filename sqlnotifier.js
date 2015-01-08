@@ -99,7 +99,17 @@ function analyzeQuery(query) {
 	 */
 	if (query.type == 'insert') {
 		var conditions = {};
-		conditions[query.table] = []; // TODO: column values
+		var colvals = [];
+		if (query.rows.length == 1) {
+			// insert only one tuple: add clauses
+			for (var i = 0; i < query.cols.length; i++) {
+				if (isLiteral(query.rows[0][i])) {
+					// add clause col = value
+					colvals.push([query.cols[i], 0, query.rows[0][i]]);
+				}
+			}
+		}
+		conditions[query.table] = colvals; //  column values
 		return conditions;
 	} else if (query.type == 'update') {
 		var conditions = {};
