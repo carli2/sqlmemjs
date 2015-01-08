@@ -18,6 +18,39 @@ var tableDef = {
 	}
 };
 
+var exprs = {
+	'=': 0,
+	'<>': 1,
+	'>=': 4,
+	'<': 5,
+	'<=': 6,
+	'>': 7
+		// genious operator list:
+		// op&1: 0=equality assured, 1=unequality assured
+		// op^1: opposite operator
+};
+var testLiterals = {
+	0: function(a, b) { return a == b; },
+	1: function(a, b) { return a != b; },
+	4: function(a, b) { return a >= b; },
+	5: function(a, b) { return a < b; },
+	6: function(a, b) { return a <= b; },
+	7: function(a, b) { return a > b; },
+};
+var equalityCombinations = [
+	// scheme: x is attribute, a, b are literals
+	// if x ? a && x ? b && a ? b then unsat
+	[5, 4, 6], // < >= <=
+	[6, 4, 5], // <= >= <
+	[6, 7, 6], // <= > <=
+	[0, 0, 1], // = = <>
+	[0, 1, 0], // = <> =
+	[0, 5, 0], // = < =
+	[0, 7, 0], // = > =
+	[0, 4, 5], // = >= <
+	[0, 6, 7], // = <= >
+];
+
 /**
  * decompose a SQL query into table- and column related clauses
  */
@@ -34,17 +67,6 @@ function analyzeQuery(query) {
 	function insertWhereClauses(conditions, expr) {
 		if (!expr) return;
 		if (expr.cmp) {
-			var exprs = {
-				'=': 0,
-				'<>': 1,
-				'>=': 4,
-				'<': 5,
-				'<=': 6,
-				'>': 7
-				// genious operator list:
-				// op&1: 0=equality assured, 1=unequality assured
-				// op^1: opposite operator
-			};
 			var lit, v, x;
 			if (isLiteral(expr.a) && isVariable(expr.b)) {
 				lit = expr.a;
@@ -139,25 +161,37 @@ function analyzeQuery(query) {
 
 function queryEffectsSelect(query, select) {
 	function clausesIntercept(a, b) {
-		var unequalOperators = {
-			1: true, // !=
-			4: true, // <
-			6: true  // >
-		};
 		for (var i = 0; i < a.length; i++) {
 			for (var j = 0; j < b.length; j++) {
 				var l = a[i], r = b[j];
 				if (l[0] == r[0]) {
 					// both clauses refer to the same attribute
-					if (l[1] == 0 && r[1] == 0 && l[2] != r[2]) {
-						// interception a=1 && a=2
-						return false;
+					/*var y = [];
+					for (var x in testLiterals) {
+						if (testLiterals[x](l[2], r[2])) {
+							y.push(x);
+						}
 					}
-					if (((l[1] == 0 && (r[1]&1)) || ((l[1]&1) && r[1] == 0)) && l[2] == r[2]) {
-						// interception a=1 && a!=1
-						return false;
+					console.log('test clause ' + l[1] + ' ' + r[1] + ' ' + JSON.stringify(y));
+					y = [];
+					for (var x in testLiterals) {
+						if (testLiterals[x](r[2], l[2])) {
+							y.push(x);
+						}
 					}
-					// TODO: < >
+					console.log('test clause ' + r[1] + ' ' + l[1] + ' ' + JSON.stringify(y));*/
+
+					// walk through all unsat rules for relations
+					for (var k = 0; k < equalityCombinations.length; k++) {
+						if (l[1] == equalityCombinations[k][0] && r[1] == equalityCombinations[k][1] && testLiterals[equalityCombinations[k][2]](l[2], r[2])) {
+							// x ? a && x ? b && a ? b => unsatisfiable
+							return false;
+						}
+						if (r[1] == equalityCombinations[k][0] && l[1] == equalityCombinations[k][1] && testLiterals[equalityCombinations[k][2]](r[2], l[2])) {
+							// x ? b && x ? a && b ? a => unsatisfiable
+							return false;
+						}
+					}
 				}
 			}
 		}
@@ -203,9 +237,11 @@ observeQuery('select * from a where x=2');
 observeQuery('select * from a where x between 6 and 9');
 performQuery('insert into a(x) values (3)');
 performQuery('delete from b');
+performQuery('delete from a where x > 2');
 performQuery('update a set y=1 where x=4');
 performQuery('update a set y=y + 1 where x=2');
 performQuery('update a set y=5 where x < 7');
+performQuery('update a set y=1 where x < 4');
 
 
 // TODO: nested select, multiple tables
