@@ -20,7 +20,7 @@ sqlparser.js: sqlspec.js
 	node sqlspec.js
 
 deps:
-	npm install jison minify jsdoc
+	npm install jison@0.4.13 minify jsdoc
 
 run: sqlparser.js
 	node testapp.js

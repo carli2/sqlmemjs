@@ -44,6 +44,7 @@ function analyzeQuery(query) {
 				// genious operator list:
 				// op&1: 0=equality assured, 1=unequality assured
 				// op^1: opposite operator
+				// op^2: turn around sign
 			};
 			var lit, v, x;
 			if (isLiteral(expr.a) && isVariable(expr.b)) {
@@ -52,7 +53,7 @@ function analyzeQuery(query) {
 				x = exprs[expr.cmp];
 				if (x >= 4) {
 					// flip < and > comparisons
-					x ^= 1;
+					x ^= 2;
 				}
 			} else if (isLiteral(expr.b) && isVariable(expr.a)) {
 				lit = expr.b;
